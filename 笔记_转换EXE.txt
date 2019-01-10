@@ -1,0 +1,3 @@
+cxfreeze D:/hello.py --target-dir D:/123  
+全部小写
+在Pycharm里面需要手动复制 cxfreeze.bat
