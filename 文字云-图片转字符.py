@@ -1,6 +1,6 @@
 from PIL import Image
 
-id_img=Image.open(r"G:\Temp_pillow\2.jpg")
+id_img=Image.open("G:/111.jpg")
 print(id_img.format,id_img.size,id_img.mode)
 ascii_char = list("$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,\"^`'. ")
 length = len(ascii_char)
@@ -18,7 +18,7 @@ def convert1(id_img):
     return  txt
 
 txt = convert1(id_img)
-f = open(r"G:\Temp_pillow\2.txt","w")
+f = open(r"G:/2.txt","w")
 f.write(txt) 
 f.close()
 
