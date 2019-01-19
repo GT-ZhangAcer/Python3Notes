@@ -17,6 +17,7 @@ cannyimg=cv2.Canny(blurimg,50,150)#第二个参数为最小阈值，第三个为
 cv2.imshow("边缘检测",cannyimg)
 cv2.imwrite(path+"Final.jpg",cannyimg)#写入文件不可以是中文，中文不输出
 
+print(img)
 #检测结果反转
 ii=0
 for i in cannyimg:
