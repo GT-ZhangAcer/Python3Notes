@@ -14,4 +14,5 @@ blurimg=cv2.blur(grayimg,(3,3))#使用3x3内核降噪
 cannyimg=cv2.Canny(blurimg,50,150)#第二个参数为最小阈值，第三个为最大阈值
 cv2.imshow("边缘检测",cannyimg)
 cv2.imwrite(path+"边缘检测结果.jpg",cannyimg)
+
 cv2.waitKey(0)#等待按键后关闭窗口
