@@ -1,5 +1,5 @@
 import cv2
-import Class_OS.获得当前工作目录
+import Class_OS.a1_获得当前工作目录
 
 #指定路径
 path=Class_OS.获得当前工作目录.main()+"Testimg/"
