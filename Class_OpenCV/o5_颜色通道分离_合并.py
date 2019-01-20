@@ -7,7 +7,7 @@ file=path+"RGBimgMin.jpg"
 
 img=cv.imread(file)
 imgsplit=cv.split(img)#通道分离
-cv.imshow("R",imgsplit[0])
+cv.imshow("B",imgsplit[0])
 imgmerge=cv.merge(imgsplit)
 cv.imshow("RGB",imgmerge)
 cv.waitKey(0)#等待按键后关闭窗口
