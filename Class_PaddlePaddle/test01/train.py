@@ -1,6 +1,11 @@
 #加载库
 import paddle.fluid as fluid
 import numpy
+import Class_OS.o1_获得当前工作目录
+
+#指定路径
+path=Class_OS.o1_获得当前工作目录.main()+"/"
+print(path)
 #定义数据
 train_data=numpy.array([[1.0],[2.0],[3.5],[4.0],[5.0]]).astype('float32')
 y_true = numpy.array([[1],[1],[0],[0],[0]]).astype('float32')
@@ -19,7 +24,7 @@ cpu = fluid.core.CPUPlace()
 exe = fluid.Executor(cpu)
 exe.run(fluid.default_startup_program())
 ##开始训练，迭代100次
-params_dirname = "fit_a_line.inference.model"
+params_dirname = path+"test01.inference.model"
 for i in range(50):
     outs = exe.run(
         feed={'x':train_data,'y':y_true},
