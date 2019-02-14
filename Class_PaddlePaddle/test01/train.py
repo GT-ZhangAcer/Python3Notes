@@ -4,34 +4,40 @@ import numpy
 import Class_OS.o1_获得当前工作目录
 
 #指定路径
-path=Class_OS.o1_获得当前工作目录.main()+"/"
-print(path)
+path=Class_OS.o1_获得当前工作目录.main()
+params_dirname = path+"test01.inference.model"
+print("训练后文件夹路径"+params_dirname)
+#参数初始化
+cpu = fluid.CPUPlace()
+exe = fluid.Executor(cpu)
+
+
 #定义数据
-train_data=numpy.array([[1.0],[2.0],[3.5],[4.0],[5.0]]).astype('float32')
-y_true = numpy.array([[1],[1],[0],[0],[0]]).astype('float32')
+train_data=numpy.array([[1],[2],[3],[4],[5]]).astype('int16')#10倍缩放 此处int32可能会报错
+y_true = numpy.array([[10],[20],[30],[40],[50]]).astype('int16')
 #定义网络
 x = fluid.layers.data(name="x",shape=[1],dtype='float32')
 y = fluid.layers.data(name="y",shape=[1],dtype='float32')
-y_predict = fluid.layers.fc(input=x,size=1,act=None)
+y_predict = fluid.layers.fc(input=x,size=1,act=None)#定义x与其有关系
 #定义损失函数
 cost = fluid.layers.square_error_cost(input=y_predict,label=y)
 avg_cost = fluid.layers.mean(cost)
 #定义优化方法
 sgd_optimizer = fluid.optimizer.SGD(learning_rate=0.01)
 sgd_optimizer.minimize(avg_cost)
-#参数初始化
-cpu = fluid.core.CPUPlace()
-exe = fluid.Executor(cpu)
-exe.run(fluid.default_startup_program())
+
 ##开始训练，迭代100次
-params_dirname = path+"test01.inference.model"
-for i in range(50):
+prog=fluid.default_startup_program()
+exe.run(prog)
+
+for i in range(500):
     outs = exe.run(
         feed={'x':train_data,'y':y_true},
-        fetch_list=[y_predict.name,avg_cost.name])
+        fetch_list=[y_predict.name,avg_cost.name])#feed为数据表 输入数据和标签数据
     print("正在训练第"+str(i+1)+"次")
 #观察结果
     print(outs)
-    fluid.io.save_inference_model(params_dirname, ['x'],[y_predict], exe)
+#保存预测模型
+fluid.io.save_inference_model(params_dirname, ['x'],[y_predict], exe)
 
 print(params_dirname)
