@@ -8,10 +8,11 @@ path=Class_OS.o1_获得当前工作目录.main()+"/"
 params_dirname = path+"test01.inference.model"
 print("训练后文件夹路径"+params_dirname)
 #目标数据
-test_data=numpy.array([[60]]).astype("int16")#测试数为60
+datatype="float32"
+test_data=numpy.array([[input("请输入数值")]]).astype(datatype)#测试数为60
 #定义网络
-x = fluid.layers.data(name="x",shape=[1],dtype='float32')
-y = fluid.layers.data(name="y",shape=[1],dtype='float32')
+x = fluid.layers.data(name="x",shape=[1],dtype=datatype)
+y = fluid.layers.data(name="y",shape=[1],dtype=datatype)
 
 
 #参数初始化

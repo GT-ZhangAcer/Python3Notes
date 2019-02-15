@@ -13,11 +13,12 @@ exe = fluid.Executor(cpu)
 
 
 #定义数据
-train_data=numpy.array([[1],[2],[3],[4],[5]]).astype('int16')#10倍缩放 此处int32可能会报错
-y_true = numpy.array([[10],[20],[30],[40],[50]]).astype('int16')
+datatype="float32"
+train_data=numpy.array([[0],[1],[2],[3],[4],[5],[10]]).astype(datatype)#10倍缩放 此处数据类型尽可能与网格类型相似
+y_true = numpy.array([[3],[13],[23],[33],[43],[53],[103]]).astype(datatype)
 #定义网络
-x = fluid.layers.data(name="x",shape=[1],dtype='float32')
-y = fluid.layers.data(name="y",shape=[1],dtype='float32')
+x = fluid.layers.data(name="x",shape=[1],dtype=datatype)
+y = fluid.layers.data(name="y",shape=[1],dtype=datatype)
 y_predict = fluid.layers.fc(input=x,size=1,act=None)#定义x与其有关系
 #定义损失函数
 cost = fluid.layers.square_error_cost(input=y_predict,label=y)
@@ -30,7 +31,7 @@ sgd_optimizer.minimize(avg_cost)
 prog=fluid.default_startup_program()
 exe.run(prog)
 
-for i in range(500):
+for i in range(5000):
     outs = exe.run(
         feed={'x':train_data,'y':y_true},
         fetch_list=[y_predict.name,avg_cost.name])#feed为数据表 输入数据和标签数据
