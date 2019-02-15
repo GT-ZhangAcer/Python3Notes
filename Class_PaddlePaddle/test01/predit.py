@@ -29,4 +29,4 @@ fluid.io.load_params(executor=exe, dirname=params_dirname,
 results = exe.run(inference_program,
                   feed={feed_target_names[0]: test_data},
                   fetch_list=fetch_targets)
-print(results[0])
+print(results[0][0])
