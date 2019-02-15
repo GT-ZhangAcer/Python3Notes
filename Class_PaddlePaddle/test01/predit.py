@@ -10,10 +10,6 @@ print("训练后文件夹路径"+params_dirname)
 #目标数据
 datatype="float32"
 test_data=numpy.array([[input("请输入数值")]]).astype(datatype)#测试数为60
-#定义网络
-x = fluid.layers.data(name="x",shape=[1],dtype=datatype)
-y = fluid.layers.data(name="y",shape=[1],dtype=datatype)
-
 
 #参数初始化
 cpu = fluid.CPUPlace()
@@ -30,3 +26,5 @@ results = exe.run(inference_program,
                   feed={feed_target_names[0]: test_data},
                   fetch_list=fetch_targets)
 print(results[0][0])
+print(fetch_targets)
+print(feed_target_names)#网格列表
