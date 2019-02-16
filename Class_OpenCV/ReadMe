@@ -1,1 +1,3 @@
 opencv-contrib-python 这个库不要忘了
+出现 DLL load failed: 找不到指定的模块 下载https://www.microsoft.com/en-us/download/details.aspx?id=48145 VC2015运行库
+Win7需要升级IE到最新后重新安装
