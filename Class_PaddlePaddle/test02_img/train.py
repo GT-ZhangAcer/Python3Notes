@@ -11,6 +11,10 @@ print("训练后文件夹路径"+params_dirname)
 cpu = fluid.CPUPlace()
 exe = fluid.Executor(cpu)
 
+# 定义输入层
+image = fluid.layers.data(name='image', shape=[1, 70, 30], dtype='float32')
+label = fluid.layers.data(name='label', shape=[1], dtype='int64')
+
 # 卷积神经网络
 def convolutional_neural_network(input):
     # 第一个卷积层，卷积核大小为3*3，一共有32个卷积核
