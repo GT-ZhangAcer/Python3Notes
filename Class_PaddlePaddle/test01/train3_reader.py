@@ -18,10 +18,10 @@ datatype='float32'
 #加载数据
 def dataReader():
     def redaer():
-        for i in range(5):
+        for i in range(1,5):
             x=i
             y=3*i+4
-            yield x,y
+            yield int(x),int(y)
     return redaer
 
 #定义网络
@@ -40,16 +40,14 @@ feeder = fluid.DataFeeder(place=cpu, feed_list=[x, y])
 prog=fluid.default_startup_program()
 exe.run(prog)
 
-
-for batch_id,data in enumerate(batch_reader()):
-    print(batch_id)
-    print(data)
-    outs = exe.run(
-        feed=feeder.feed(data),
-        fetch_list=[y_predict.name,avg_cost.name])#feed为数据表 输入数据和标签数据
-
+for i in range(50):
+    for batch_id,data in enumerate(batch_reader()):
+        outs = exe.run(
+            feed=feeder.feed(data),
+            fetch_list=[y_predict.name,avg_cost.name])#feed为数据表 输入数据和标签数据
+        print(y_predict.name,avg_cost)
 
 #保存预测模型
 fluid.io.save_inference_model(params_dirname, ['x'],[y_predict], exe)
 
-print(params_dirname)
+print("---Done!")
