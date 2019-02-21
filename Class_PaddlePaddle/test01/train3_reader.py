@@ -18,13 +18,6 @@ datatype='float32'
 #加载数据
 def dataReader():
     def redaer():
-        '''
-        for i in range(2000):
-
-            img = paddle.dataset.image.load_image(path + "data/" + str(i+1) + ".jpg")
-            idnum=linecache.getline(path + "data/ocrData.txt",i)
-            yield img,int(idnum)
-         '''
         for i in range(5):
             x=i
             y=3*i+4
