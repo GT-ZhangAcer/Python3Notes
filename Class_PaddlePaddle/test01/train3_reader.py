@@ -18,16 +18,16 @@ datatype='float32'
 #加载数据
 def dataReader():
     def redaer():
-        for i in range(1,5):
+        for i in range(10):
             x=i
-            y=3*i+4
+            y=3*i
             yield int(x),int(y)
     return redaer
 
 #定义网络
 x = fluid.layers.data(name="x",shape=[1],dtype=datatype)
 y = fluid.layers.data(name="y",shape=[1],dtype=datatype)
-y_predict = fluid.layers.fc(input=x,size=1,act=None)#定义x与其有关系
+y_predict = fluid.layers.fc(input=x,size=1,act='softmax')#定义x与其有关系
 #定义损失函数
 cost = fluid.layers.square_error_cost(input=y_predict,label=y)
 avg_cost = fluid.layers.mean(cost)
@@ -42,10 +42,11 @@ exe.run(prog)
 
 for i in range(50):
     for batch_id,data in enumerate(batch_reader()):
+        print(data)
         outs = exe.run(
             feed=feeder.feed(data),
-            fetch_list=[y_predict.name,avg_cost.name])#feed为数据表 输入数据和标签数据
-        print(y_predict.name,avg_cost)
+            fetch_list=[y_predict,avg_cost])#feed为数据表 输入数据和标签数据
+        print(y_predict,avg_cost)
 
 #保存预测模型
 fluid.io.save_inference_model(params_dirname, ['x'],[y_predict], exe)
