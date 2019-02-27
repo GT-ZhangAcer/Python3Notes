@@ -5,7 +5,7 @@ import Class_OS.o1_获得当前工作目录
 
 #指定路径
 path=Class_OS.o1_获得当前工作目录.main()+"/"
-params_dirname = path+"test01.inference.model"
+params_dirname = path+"test02.inference.model"
 print("训练后文件夹路径"+params_dirname)
 #目标数据
 datatype="float32"
