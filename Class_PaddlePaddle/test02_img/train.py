@@ -20,7 +20,7 @@ with open(path + "data/ocrData.txt", 'rt') as f:
     a=f.read()
 def dataReader():
     def redaer():
-        for i in range(2000):
+        for i in range(1500):
             im = Image.open(path + "data/" + str(i+1) + ".jpg").convert('L')
             im = np.array(im).reshape(30, 15).astype(np.float32)
             im = im / 255.0 * 2.0 - 1.0
@@ -29,12 +29,12 @@ def dataReader():
             img=np.transpose(img, (2, 0, 1))'''
             labelInfo=a[i]
             yield im,labelInfo
-    print("Reader---OK!")
     return redaer
 
 #定义网络
 x = fluid.layers.data(name="x",shape=[1,30,15],dtype=datatype)
 label = fluid.layers.data(name='label', shape=[1], dtype='int64')
+
 def cnn(ipt):
     conv1 = fluid.layers.conv2d(input=ipt,
                                 num_filters=32,
@@ -76,7 +76,7 @@ def cnn(ipt):
 net = cnn(x)
 
 #定义损失函数
-cost = fluid.layers.square_error_cost(input=net,label=label)
+cost = fluid.layers.cross_entropy(input=net,label=label)
 avg_cost = fluid.layers.mean(cost)
 acc = fluid.layers.accuracy(input=net, label=label, k=1)
 #定义优化方法
@@ -84,18 +84,22 @@ sgd_optimizer = fluid.optimizer.SGD(learning_rate=0.01)
 sgd_optimizer.minimize(avg_cost)
 #数据传入设置
 batch_reader = paddle.batch(reader=dataReader(), batch_size=1024)
-feeder = fluid.DataFeeder(place=cpu, feed_list=[x, acc])
+feeder = fluid.DataFeeder(place=cpu, feed_list=[x, label])
 prog=fluid.default_startup_program()
 exe.run(prog)
 
-
-for batch_id,data in enumerate(batch_reader()):
-    outs = exe.run(
-        feed=feeder.feed(data),
-        fetch_list=[label,avg_cost])#feed为数据表 输入数据和标签数据
-
+trainNum=10
+for i in range(trainNum):
+    for batch_id,data in enumerate(batch_reader()):
+        outs = exe.run(
+            feed=feeder.feed(data),
+            fetch_list=[label,avg_cost])#feed为数据表 输入数据和标签数据
+        pross=float(i)/trainNum
+        #打印输出面板
+        print(str(i+1)+"次训练后损失值为："+str(outs[1]))
+        print("当前训练进度百分比为："+str(pross*100)[:3].strip(".")+"%")
 
 #保存预测模型
-fluid.io.save_inference_model(params_dirname, ['x'],[label], exe)
+fluid.io.save_inference_model(params_dirname, ['x'],[net], exe)
 
 print(params_dirname)

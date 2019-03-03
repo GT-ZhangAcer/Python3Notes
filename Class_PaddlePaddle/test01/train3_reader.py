@@ -21,9 +21,9 @@ datatype='float32'
 
 def dataReader():
     def reader():
-        for i in range(1,5):
+        for i in range(1,15):
             x=i
-            y=3*i
+            y=3*i+7
             yield int(x),int(y)
     return reader
 
@@ -38,12 +38,12 @@ avg_cost = fluid.layers.mean(cost)
 sgd_optimizer = fluid.optimizer.SGD(learning_rate=0.01)
 sgd_optimizer.minimize(avg_cost)
 #数据传入设置
-batch_reader = paddle.batch(reader=dataReader(), batch_size=5)
+batch_reader = paddle.batch(reader=dataReader(), batch_size=10)
 feeder = fluid.DataFeeder(place=cpu, feed_list=[x, y])
 prog=fluid.default_startup_program()
 exe.run(prog)
 
-for i in range(50):
+for i in range(500):
     for batch_id,data in enumerate(batch_reader()):
         train_cost= exe.run(
             feed=feeder.feed(data),

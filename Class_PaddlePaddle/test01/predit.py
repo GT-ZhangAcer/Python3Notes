@@ -26,5 +26,5 @@ results = exe.run(inference_program,
                   feed={feed_target_names[0]: test_data},
                   fetch_list=fetch_targets)
 print(results[0][0])
-print(fetch_targets)
-print(feed_target_names)#网格列表
+#print(fetch_targets)
+#print(feed_target_names)#网格列表
