@@ -4,6 +4,8 @@ import numpy as np
 from PIL import Image
 import Class_OS.o1_获得当前工作目录
 import linecache#读取指定行
+import os
+
 
 # 指定路径
 path = Class_OS.o1_获得当前工作目录.main()
@@ -31,6 +33,18 @@ def dataReader():
             yield im,labelInfo
     return redaer
 
+def testReader():
+    def redaer():
+        for i in range(1501,1800):
+            im = Image.open(path + "data/" + str(i+1) + ".jpg").convert('L')
+            im = np.array(im).reshape(30, 15).astype(np.float32)
+            im = im / 255.0 * 2.0 - 1.0
+            '''
+            img = paddle.dataset.image.load_image(path + "data/" + str(i+1) + ".jpg")
+            img=np.transpose(img, (2, 0, 1))'''
+            labelInfo=a[i]
+            yield im,labelInfo
+    return redaer
 #定义网络
 x = fluid.layers.data(name="x",shape=[1,30,15],dtype=datatype)
 label = fluid.layers.data(name='label', shape=[1], dtype='int64')
@@ -84,6 +98,7 @@ sgd_optimizer = fluid.optimizer.SGD(learning_rate=0.01)
 sgd_optimizer.minimize(avg_cost)
 #数据传入设置
 batch_reader = paddle.batch(reader=dataReader(), batch_size=1024)
+testb_reader=paddle.batch(reader=testReader(), batch_size=1024)
 feeder = fluid.DataFeeder(place=cpu, feed_list=[x, label])
 prog=fluid.default_startup_program()
 exe.run(prog)
@@ -98,8 +113,24 @@ for i in range(trainNum):
         #打印输出面板
         print(str(i+1)+"次训练后损失值为："+str(outs[1]))
         print("当前训练进度百分比为："+str(pross*100)[:3].strip(".")+"%")
+    for batch_id,data in enumerate(testb_reader()):
+        test_acc,test_cost = exe.run(
+            feed=feeder.feed(data),
+            fetch_list=[label, avg_cost])  # feed为数据表 输入数据和标签数据
+        test_costs=[]
+        test_costs.append(test_cost[0])
+        testcost = (sum(test_costs) / len(test_costs))
+        print("预测损失为：",testcost,"\n")
 
 #保存预测模型
+path=params_dirname
+def del_file(path):
+    for i in os.listdir(path):
+        path_file = os.path.join(path, i)
+        if os.path.isfile(path_file):
+            os.remove(path_file)
+        else:
+            del_file(path_file)
 fluid.io.save_inference_model(params_dirname, ['x'],[net], exe)
 
 print(params_dirname)

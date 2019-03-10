@@ -1,0 +1,13 @@
+Metadata-Version: 2.1
+Name: recordio
+Version: 0.1.7
+Summary: An implementation of the RecordIO file format.
+Home-page: https://github.com/PaddlePaddle/recordio
+Author: PaddlePaddle Authors
+Author-email: paddle-dev@baidu.com
+License: Apache 2.0
+Platform: UNKNOWN
+
+UNKNOWN
+
+

@@ -11,11 +11,22 @@ print("训练后文件夹路径"+params_dirname)
 #目标数据
 with open(path + "data/ocrData.txt", 'rt') as f:
     a=f.read()
-def readImg(i):
-    im = Image.open(path + "data/" + str(i) + ".jpg").convert('L')
-    im = np.array(im).reshape(30, 15).astype(np.float32)
-    im = im / 255.0 * 2.0 - 1.0
-    return im
+
+
+def load_image(i):
+    file=path + "data/%s.jpg"%i
+    img = Image.open(file)
+    # 统一图像大小
+    img = img.resize((15, 30), Image.ANTIALIAS)
+    # 转换成numpy值
+    img = np.array(img).astype(np.float32)
+    # 转换成CHW
+    img = img.transpose((2, 0, 1))
+    # 转换成BGR
+    img = img[(2, 1, 0), :, :] / 255.0
+    img = np.expand_dims(img, axis=0)
+    return img
+
 
 #参数初始化
 cpu = fluid.CPUPlace()
@@ -26,10 +37,9 @@ prog=fluid.default_startup_program()
 [inference_program, feed_target_names,fetch_targets] = fluid.io.load_inference_model(params_dirname, exe)
 
 
-#进行预测并得出准确度
-preditNum=2000
-for i in range(1999,preditNum):
-    img=readImg(i)
+
+for i in range(1999,2000):
+    img=load_image(i)
     results = exe.run(inference_program,
                       feed={feed_target_names[0]: img},
                       fetch_list=fetch_targets)
