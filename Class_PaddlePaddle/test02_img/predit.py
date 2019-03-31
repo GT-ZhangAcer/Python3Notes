@@ -14,10 +14,10 @@ with open(path + "data/ocrData.txt", 'rt') as f:
 
 
 def dataReader(i):
-    im = Image.open(path + "data/" + str(i + 1) + ".jpg").convert('L')
-    im = np.array(im).reshape(30, 15).astype(np.float32)
+    im = Image.open(path + "data/" + str(i) + ".jpg").convert('L')
+    im = numpy.array(im).reshape(1, 1, 30, 15).astype(numpy.float32)
     im = im / 255.0 * 2.0 - 1.0
-    im = numpy.expand_dims(im, axis=0)
+    #im = numpy.expand_dims(im, axis=0)
     return im
 
 
@@ -30,8 +30,11 @@ exe.run(prog)
 # 加载模型
 [inference_program, feed_target_names, fetch_targets] = fluid.io.load_inference_model(params_dirname, exe)
 
-img=dataReader(1998)
+img=dataReader(1972)
 results = exe.run(inference_program,
     feed={feed_target_names[0]: img},
     fetch_list=fetch_targets)
-print(results)
+
+lab = np.argsort(results)[0][0][-1]
+
+print(lab)

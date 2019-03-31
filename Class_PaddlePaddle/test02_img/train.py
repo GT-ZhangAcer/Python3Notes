@@ -103,7 +103,7 @@ feeder = fluid.DataFeeder(place=cpu, feed_list=[x, label])
 prog=fluid.default_startup_program()
 exe.run(prog)
 
-trainNum=10
+trainNum=3
 for i in range(trainNum):
     for batch_id,data in enumerate(batch_reader()):
         outs = exe.run(
