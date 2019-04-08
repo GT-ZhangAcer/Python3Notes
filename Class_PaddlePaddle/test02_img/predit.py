@@ -15,6 +15,8 @@ def dataReader(i):
     im = numpy.array(im).reshape(1, 1, 30, 15).astype(numpy.float32)
     im = im / 255.0 * 2.0 - 1.0
     return im
+with open(path + "data/ocrData.txt", 'rt') as f:
+    a = f.read()
 
 
 # 参数初始化
@@ -22,6 +24,7 @@ cpu = fluid.CPUPlace()
 exe = fluid.Executor(cpu)
 prog = fluid.default_startup_program()
 exe.run(prog)
+
 
 # 加载模型
 [inference_program, feed_target_names, fetch_targets] = fluid.io.load_inference_model(params_dirname, exe)
@@ -32,5 +35,7 @@ for i in range(1951,2001):
         fetch_list=fetch_targets)
 
     lab = np.argsort(results)[0][0][-1]
-
-    print(i,"预测结果为:"+str(lab))
+    if str(lab)==a[i-1]:
+        print(i,"预测结果为:"+str(lab)+" True")
+    else:
+        print(i,"预测结果为:"+str(lab)+" False")

@@ -69,7 +69,7 @@ def testReader():
 x = fluid.layers.data(name="x", shape=[1, 30, 15], dtype=datatype)
 label = fluid.layers.data(name='label', shape=[1], dtype='int64')
 
-
+sss=0
 def cnn(ipt):
     conv1 = fluid.layers.conv2d(input=ipt,
                                 num_filters=32,
@@ -139,14 +139,14 @@ def convolutional_neural_network(img):
     """
     # 第一个卷积-池化层
     # 使用20个5*5的滤波器，池化大小为2，池化步长为2，激活函数为Relu
-    conv_pool_1 = fluid.nets.simple_img_conv_pool(
+    conv_pool_0 = fluid.nets.simple_img_conv_pool(
         input=img,
         filter_size=5,
         num_filters=20,
         pool_size=2,
         pool_stride=2,
         act="relu")
-    conv_pool_1 = fluid.layers.batch_norm(conv_pool_1)
+    conv_pool_1 = fluid.layers.batch_norm(conv_pool_0)
     # 第二个卷积-池化层
     # 使用50个5*5的滤波器，池化大小为2，池化步长为2，激活函数为Relu
     conv_pool_2 = fluid.nets.simple_img_conv_pool(
@@ -161,9 +161,9 @@ def convolutional_neural_network(img):
     return prediction
 
 
-net = cnn(x)  # CNN模型
-# net = multilayer_perceptron(x)  # 多层感知机
-# net=convolutional_neural_network(x)#官方的CNN
+#net = cnn(x)  # CNN模型
+net = multilayer_perceptron(x)  # 多层感知机
+#net=convolutional_neural_network(x)#官方的CNN
 # 定义损失函数
 cost = fluid.layers.cross_entropy(input=net, label=label)
 avg_cost = fluid.layers.mean(cost)
@@ -178,14 +178,13 @@ feeder = fluid.DataFeeder(place=place, feed_list=[x, label])
 prog = fluid.default_startup_program()
 exe.run(prog)
 
-trainNum = 5
+trainNum = 50
 for i in range(trainNum):
     for batch_id, data in enumerate(batch_reader()):
         outs = exe.run(
             feed=feeder.feed(data),
             fetch_list=[label, avg_cost])  # feed为数据表 输入数据和标签数据
 
-        # 打印输出面板
         trainTag.add_record(i, outs[1])
         # print(str(i + 1) + "次训练后损失值为：" + str(outs[1]))
         #
