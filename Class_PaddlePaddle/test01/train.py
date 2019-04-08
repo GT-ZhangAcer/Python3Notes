@@ -8,14 +8,16 @@ path=Class_OS.o1_获得当前工作目录.main()
 params_dirname = path+"test01.inference.model"
 print("训练后文件夹路径"+params_dirname)
 #参数初始化
-cpu = fluid.CPUPlace()
-exe = fluid.Executor(cpu)
+gpu = fluid.CUDAPlace(0)
+exe = fluid.Executor(gpu)
 
 
 #定义数据
 datatype="float32"
 train_data=numpy.array([[0],[1],[2],[3],[4],[5],[10]]).astype(datatype)#10倍缩放 此处数据类型尽可能与网格类型相似
 y_true = numpy.array([[3],[13],[23],[33],[43],[53],[103]]).astype(datatype)
+
+
 #定义网络
 x = fluid.layers.data(name="x",shape=[1],dtype=datatype)
 y = fluid.layers.data(name="y",shape=[1],dtype=datatype)
