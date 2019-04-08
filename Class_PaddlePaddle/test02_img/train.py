@@ -12,13 +12,17 @@ path = Class_OS.o1_获得当前工作目录.main()
 params_dirname = path + "test02.inference.model"
 print("训练后文件夹路径" + params_dirname)
 # 参数初始化
-cpu = fluid.CUDAPlace(0)
-exe = fluid.Executor(cpu)
+place = fluid.CUDAPlace(0)
+#place=fluid.CPUPlace()
+exe = fluid.Executor(place)
 
 # visualdl
-logw = visualdl.LogWriter("g:/log/main_log", sync_cycle=100)
+logw = visualdl.LogWriter("g:/log/main_log", sync_cycle=10)
 with logw.mode('train') as logger:
-    scalar0 = logger.scalar("scratch/scalar")
+    trainTag = logger.scalar("损失指标")
+with logw.mode('test') as logger:
+    testTag = logger.scalar("损失指标")
+# visualDL --logdir g:/log/main_log --port 8080 --host 127.0.0.10
 
 # 加载数据
 datatype = 'float32'
@@ -164,21 +168,21 @@ sgd_optimizer.minimize(avg_cost)
 # 数据传入设置
 batch_reader = paddle.batch(reader=dataReader(), batch_size=1024)
 testb_reader = paddle.batch(reader=testReader(), batch_size=1024)
-feeder = fluid.DataFeeder(place=cpu, feed_list=[x, label])
+feeder = fluid.DataFeeder(place=place, feed_list=[x, label])
 prog = fluid.default_startup_program()
 exe.run(prog)
 
-trainNum = 30
+trainNum = 300
 for i in range(trainNum):
     for batch_id, data in enumerate(batch_reader()):
         outs = exe.run(
             feed=feeder.feed(data),
             fetch_list=[label, avg_cost])  # feed为数据表 输入数据和标签数据
-        pross = float(i) / trainNum
+
         # 打印输出面板
-        scalar0.add_record(i, outs[1])
-        print(str(i + 1) + "次训练后损失值为：" + str(outs[1]))
-        print("当前训练进度百分比为：" + str(pross * 100)[:3].strip(".") + "%")
+        trainTag.add_record(i, outs[1])
+        # print(str(i + 1) + "次训练后损失值为：" + str(outs[1]))
+        #
     for batch_id, data in enumerate(testb_reader()):
         test_acc, test_cost = exe.run(
             feed=feeder.feed(data),
@@ -186,7 +190,10 @@ for i in range(trainNum):
         test_costs = []
         test_costs.append(test_cost[0])
         testcost = (sum(test_costs) / len(test_costs))
-        print("预测损失为：", testcost, "\n")
+        testTag.add_record(i, testcost)
+        # print("预测损失为：", testcost, "\n")
+    pross = float(i) / trainNum
+    print("当前训练进度百分比为：" + str(pross * 100)[:3].strip(".") + "%")
 
 # 保存预测模型
 path = params_dirname
