@@ -13,15 +13,21 @@ params_dirname = path + "test02.inference.model"
 print("训练后文件夹路径" + params_dirname)
 # 参数初始化
 place = fluid.CUDAPlace(0)
-#place=fluid.CPUPlace()
+# place=fluid.CPUPlace()
 exe = fluid.Executor(place)
 
 # visualdl
 logw = visualdl.LogWriter("g:/log/main_log", sync_cycle=10)
+# Scalar-损失指标
 with logw.mode('train') as logger:
     trainTag = logger.scalar("损失指标")
 with logw.mode('test') as logger:
     testTag = logger.scalar("损失指标")
+# Image-卷积图片
+with logw.mode("train") as writer:
+    conv_image = writer.image("转换后图片", 3, 1)  # 每一次训练仅展示3张图片
+    input_image = writer.image("input_image", 3, 1)
+
 # visualDL --logdir g:/log/main_log --port 8080 --host 127.0.0.10
 
 # 加载数据
@@ -155,8 +161,8 @@ def convolutional_neural_network(img):
     return prediction
 
 
-# net = cnn(x) #CNN模型
-net = multilayer_perceptron(x)  # 多层感知机
+net = cnn(x)  # CNN模型
+# net = multilayer_perceptron(x)  # 多层感知机
 # net=convolutional_neural_network(x)#官方的CNN
 # 定义损失函数
 cost = fluid.layers.cross_entropy(input=net, label=label)
@@ -172,7 +178,7 @@ feeder = fluid.DataFeeder(place=place, feed_list=[x, label])
 prog = fluid.default_startup_program()
 exe.run(prog)
 
-trainNum = 300
+trainNum = 5
 for i in range(trainNum):
     for batch_id, data in enumerate(batch_reader()):
         outs = exe.run(
