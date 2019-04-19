@@ -119,7 +119,6 @@ def multilayer_perceptron(img):
     Return:
         predict_image -- 分类的结果
     """
-    # 输入的原始图像数据，大小为28*28*1
     # 第一个全连接层，激活函数为ReLU
     hidden = fluid.layers.fc(input=img, size=200, act='relu')
     # 第二个全连接层，激活函数为ReLU

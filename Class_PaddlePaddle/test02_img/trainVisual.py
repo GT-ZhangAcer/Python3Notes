@@ -129,7 +129,7 @@ for i in range(trainNum):
             # 图像拉伸
             for ii in range(5):
                 # 获取图像
-                pic0 = (outs[2][i][0] * 255).astype(int)  # 取第一张图片第一个组的滤波器过虑数据
+                pic0 = (outs[2][ii][0] * 255).astype(int)  # 取第一张图片第一个组的滤波器过滤数据
                 picMax = np.max(pic0)  # 求最值
                 picMin = np.min(pic0)
                 # 获取颜色拉伸后图像
@@ -139,11 +139,11 @@ for i in range(trainNum):
                 picMax = np.max(pic)  # 求最值
                 picMin = np.min(pic)
                 print(str(picMax)+"-"+ str(picMin))
-                
-                # 将滤波器过虑数据转成PIL
-                #pic = Image.fromarray(pic1.reshape(pic1.shape[-2], pic1.shape[-1]).astype('uint8'))
                 '''
-                conv_image.set_sample(i, pic1.shape,pic1.flatten())
+                # 将滤波器过虑数据转成PIL
+                pic = Image.fromarray(pic1.reshape(pic1.shape[-2], pic1.shape[-1]).astype('uint8'))
+                pic.show()
+
 
     for batch_id, data in enumerate(testb_reader()):
         test_acc, test_cost = exe.run(
