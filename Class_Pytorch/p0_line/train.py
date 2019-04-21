@@ -44,6 +44,7 @@ for t in range(100):
     optimizer.zero_grad()   # 清空上一步的残余更新参数值
     loss.backward()         # 误差反向传播, 计算参数更新值
     optimizer.step()        # 将参数更新值施加到 net 的 parameters 上
+    print(loss)
     if t % 2 == 0:
         plt.cla()
         # 过了一道 softmax 的激励函数后的最大概率才是预测值
