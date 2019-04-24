@@ -7,6 +7,8 @@ from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
+
+
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import Class_OS.o1_获得当前工作目录
@@ -30,7 +32,7 @@ class ReaderData(Dataset):
         im = Image.open(path + "data/" + str(index) + ".jpg").convert('L')
         im = np.array(im).reshape(IMG_H, IMG_W).astype(np.float32)
         im = im / 255.0 * 2.0 - 1.0
-        # im = torch.from_numpy(im)
+        #im = torch.from_numpy(im)
         return im
 
     def __len__(self):
@@ -57,7 +59,7 @@ class Net(torch.nn.Module):
         # 解压
         self.decoder = nn.Sequential(
             nn.Linear(256, IMG_H * IMG_W),
-            nn.Sigmoid(),  # 激励函数让输出值在 (0, 1)
+            nn.Sigmoid(),
         )
         self.enZ = nn.Sequential(
             nn.Linear(256, 3),  # 压缩成3个特征值方便画图
@@ -95,6 +97,10 @@ for epoch in range(EPOCH):
 
         print("EPOCH:", epoch + 1, "LOSS:", loss.data)
 
+        # 准确率图
+        fig = plt.figure()
+        plt.plot(step, loss.data,color='red', linewidth=1.0)
+        plt.show()
         '''
         # x, y, z 的数据值
         X = enZ.data[:, 0].numpy()
@@ -114,6 +120,5 @@ for epoch in range(EPOCH):
     ax.plot_surface(xList, yList, zList, rstride=1, cstride=1, cmap=plt.get_cmap('rainbow'))
     plt.show()
     '''
-
 
 torch.save(net, path + 'save/net.pkl')
