@@ -2,8 +2,7 @@ import time
 
 class Check():
     def __init__(self,M=12,D=20):
-        self.m
-
+        pass
     def check(self,key):
         YCheck = ["A", "S", "L", "K", "G"]
         MCheck = ["Q", "R", "C", "V", "B"]
@@ -43,5 +42,5 @@ class Check():
             while (1):
                 time.sleep(50)
 
-    def make(self,M,D):
+
 
