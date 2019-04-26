@@ -36,7 +36,7 @@ def dataReader():
             
             '''
 
-            yield im_x,1
+            yield im_x, i  # 返回一个的话竟然会报错，好像是拆分了一个 啊啊啊！
 
     return redaer
 
@@ -44,15 +44,17 @@ def dataReader():
 # 定义网络
 x = fluid.layers.data(name="x", shape=shape, dtype=datatype)
 
-
 y = fluid.layers.data(name="y", shape=[1], dtype=datatype)
+label = fluid.layers.data(name="label", shape=[1], dtype=datatype)
 
 
 def net(input):
     """
     自解码网络
+    img0为原图输出，同时提供数据给下方自解码
+
     :param input: 图像张量
-    :return: 图像张量
+    :return: 自解码后数据，原图数据
     """
     img0 = fluid.layers.fc(input=input, size=shape[0] * shape[1] * shape[2])
     bn1 = fluid.layers.batch_norm(input=img0, name='bn1')
@@ -62,10 +64,10 @@ def net(input):
 
     return img, img0
 
-
+#获取网络后数据
 net_x, net_y = net(x)
 
-# 定义损失函数
+# 定义损失函数 此处应设置为软标签
 cost = fluid.layers.cross_entropy(input=net_x, label=net_y, soft_label=True)
 avg_cost = fluid.layers.mean(cost)
 
@@ -75,7 +77,7 @@ sgd_optimizer.minimize(avg_cost)
 # 数据传入设置
 batch_reader = paddle.batch(reader=dataReader(), batch_size=1024)
 # batch_reader = paddle.batch(mnist.train(), batch_size=128)
-feeder = fluid.DataFeeder(place=place, feed_list=[x,y])
+feeder = fluid.DataFeeder(place=place, feed_list=[x, y])  # V1.4版本 不可以只传入一个数据
 prog = fluid.default_startup_program()
 exe.run(prog)
 
