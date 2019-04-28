@@ -33,10 +33,10 @@ sgd_optimizer.minimize(avg_cost)
 prog=fluid.default_startup_program()
 exe.run(prog)
 
-for i in range(500):
+for i in range(5000):
     outs = exe.run(
         feed={'x':train_data,'y':y_true},
-        fetch_list=[y_predict.name,avg_cost.name])#feed为数据表 输入数据和标签数据
+        fetch_list=[y_predict.name,avg_cost])#feed为数据表 输入数据和标签数据
     print("正在训练第"+str(i+1)+"次")
 #观察结果
     print(outs)
