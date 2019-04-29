@@ -100,7 +100,7 @@ sgd_optimizer = fluid.optimizer.Adam(learning_rate=0.01)
 sgd_optimizer.minimize(avg_cost)
 
 # 数据传入设置
-batch_reader = paddle.batch(reader=dataReader(), batch_size=1)
+batch_reader = paddle.batch(reader=dataReader(), batch_size=1024)
 # batch_reader = paddle.batch(mnist.train(), batch_size=128)
 feeder = fluid.DataFeeder(place=place, feed_list=[x, label])  # V1.4版本 不可以只传入一个数据
 prog = fluid.default_startup_program()
