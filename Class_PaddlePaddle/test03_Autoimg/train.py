@@ -63,7 +63,6 @@ def net(input):
     :return: 自解码后数据，原图数据
     """
 
-
     img0 = fluid.layers.fc(input=input, size=shape[0] * shape[1], act="tanh")
 
     img = fluid.layers.fc(input=img0, size=128, act="tanh")
@@ -72,7 +71,7 @@ def net(input):
 
     img = fluid.layers.fc(input=img, size=32, act="tanh")
 
-    pltdata = fluid.layers.fc(img, size=3,act="softmax")  # 输出 XYZ坐标
+    pltdata = fluid.layers.fc(img, size=3, act="softmax")  # 输出 XYZ坐标
 
     img = fluid.layers.fc(input=pltdata, size=32, act="tanh")
 
@@ -82,27 +81,26 @@ def net(input):
 
     img = fluid.layers.fc(input=img, size=shape[0] * shape[1], act="sigmoid")
 
-    img=fluid.layers.reshape(x=img,shape=[-1,shape[0],shape[1]])
+    img = fluid.layers.reshape(x=img, shape=[-1, shape[0], shape[1]])
 
 
 
-    return img, pltdata
+    return img,pltdata
 
 
 # 获取网络后数据
-net_x, pltdata = net(x)
+net_x,pltdata = net(x)
 net_y=x
-
 # 定义损失函数 此处应设置为软标签
 # cost = fluid.layers.cross_entropy(input=net_x, label=net_y, soft_label=True)
 cost = fluid.layers.square_error_cost(input=net_x, label=net_y)
 avg_cost = fluid.layers.mean(cost)
-
 # 定义优化方法
 sgd_optimizer = fluid.optimizer.Adam(learning_rate=0.01)
 sgd_optimizer.minimize(avg_cost)
+
 # 数据传入设置
-batch_reader = paddle.batch(reader=dataReader(), batch_size=1024)
+batch_reader = paddle.batch(reader=dataReader(), batch_size=1)
 # batch_reader = paddle.batch(mnist.train(), batch_size=128)
 feeder = fluid.DataFeeder(place=place, feed_list=[x, label])  # V1.4版本 不可以只传入一个数据
 prog = fluid.default_startup_program()
@@ -112,11 +110,13 @@ trainNum = 50
 for i in range(trainNum):
     outs = []
     for batch_id, data in enumerate(batch_reader()):
+
         outs = exe.run(
             feed=feeder.feed(data),
             fetch_list=[avg_cost, pltdata])  # feed为数据表 输入数据和标签数据
 
-        print(str(i + 1) + "次训练后损失值为：" + str(outs))
+    print(str(i + 1) + "次训练后损失值为：" + str(outs))
+
     if i % 10 == 0:
         # 绘图
         fig = plt.figure()
