@@ -7,6 +7,11 @@ import linecache  # 读取指定行
 import os
 import visualdl
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
+
+
 # 指定路径
 path = Class_OS.o1_获得当前工作目录.main()
 params_dirname = path + "test02.inference.model"
@@ -125,7 +130,8 @@ def multilayer_perceptron(img):
     hidden = fluid.layers.fc(input=hidden, size=200, act='relu')
     # 以softmax为激活函数的全连接输出层，输出层的大小必须为数字的个数10
     prediction = fluid.layers.fc(input=hidden, size=10, act='softmax')
-    return prediction
+    pltdata=fluid.layers.fc(input=prediction,size=3,act=None)
+    return prediction,pltdata
 
 
 def convolutional_neural_network(img):
@@ -161,7 +167,7 @@ def convolutional_neural_network(img):
 
 
 #net = cnn(x)  # CNN模型
-net = multilayer_perceptron(x)  # 多层感知机
+net,pltdata = multilayer_perceptron(x)  # 多层感知机
 #net=convolutional_neural_network(x)#官方的CNN
 # 定义损失函数
 cost = fluid.layers.cross_entropy(input=net, label=label)
@@ -182,9 +188,37 @@ for i in range(trainNum):
     for batch_id, data in enumerate(batch_reader()):
         outs = exe.run(
             feed=feeder.feed(data),
-            fetch_list=[label, avg_cost])  # feed为数据表 输入数据和标签数据
+            fetch_list=[label, pltdata,avg_cost])  # feed为数据表 输入数据和标签数据
 
-        trainTag.add_record(i, outs[1])
+
+        if i % 3 == 0:
+
+            # 绘图-3D
+            fig = plt.figure()
+            ax = Axes3D(fig)
+            X_MIT = []
+            Y_MIT = []
+            Z_MIT = []
+            Value_MIT = []
+            for ii in range(200):
+                X_MIT.append(outs[1][ii][0])
+                Y_MIT.append(outs[1][ii][1])
+                Z_MIT.append(outs[1][ii][2])
+                Value_MIT.append(a[ii])  # label数据
+            X_MIT = np.array(X_MIT)
+            Y_MIT = np.array(Y_MIT)
+            Z_MIT = np.array(Z_MIT)
+            Value_MIT = np.array(Value_MIT)
+            for x, y, z, s in zip(X_MIT, Y_MIT, Z_MIT, Value_MIT):
+                c = cm.rainbow(int(255 * int(s) / 9))  # 上色
+                ax.text(x, y, z, s, backgroundcolor=c)  # 标位子
+            ax.set_xlim(X_MIT.min(), X_MIT.max())
+            ax.set_ylim(Y_MIT.min(), Y_MIT.max())
+            ax.set_zlim(Z_MIT.min(), Z_MIT.max())
+            plt.show()
+            pross = float(i) / trainNum
+
+        trainTag.add_record(i, outs[2])
         # print(str(i + 1) + "次训练后损失值为：" + str(outs[1]))
         #
     for batch_id, data in enumerate(testb_reader()):
@@ -196,20 +230,13 @@ for i in range(trainNum):
         testcost = (sum(test_costs) / len(test_costs))
         testTag.add_record(i, testcost)
         # print("预测损失为：", testcost, "\n")
+
+
     pross = float(i) / trainNum
     print("当前训练进度百分比为：" + str(pross * 100)[:3].strip(".") + "%")
 
 # 保存预测模型
 path = params_dirname
-
-
-def del_file(path):
-    for i in os.listdir(path):
-        path_file = os.path.join(path, i)
-        if os.path.isfile(path_file):
-            os.remove(path_file)
-        else:
-            del_file(path_file)
 
 
 fluid.io.save_inference_model(params_dirname, ['x'], [net], exe)

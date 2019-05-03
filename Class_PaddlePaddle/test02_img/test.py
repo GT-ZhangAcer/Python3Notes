@@ -1,5 +1,5 @@
 import paddle.fluid
+from PIL import Image
 
-img = paddle.dataset.image.load_image("./data/1.jpg")
-print(img)
-print(len(img),len(img[0]),len(img[0][0]))
+im = Image.open("./data/1.jpg").convert('1')
+im.show()
