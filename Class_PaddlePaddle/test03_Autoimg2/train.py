@@ -35,7 +35,6 @@ def dataReader():
         for i in range(1,READ_IMG_NUM):
             im = Image.open(path + "data/" + str(i) + ".jpg").convert('1')
             im_y = np.array(im).reshape(shape).astype(np.float32)
-            #im_x = im_x / 255.0 * 2.0 - 1.0
 
             #自解码
             for ii in range(1,IMG_RANDOM_NUM):
@@ -45,8 +44,6 @@ def dataReader():
                 imx = imx.resize((shape[1], shape[0]), Image.ANTIALIAS)
 
                 im_x = np.array(imx).reshape(shape).astype(np.float32)
-                #im_y = im_y / 255.0 * 2.0 - 1.0
-
 
                 labelInfo = a[i - 1]
                 yield im_x, im_y,labelInfo  # 返回一个的话竟然会报错，好像是拆分了一个 啊啊啊！
@@ -60,40 +57,6 @@ x = fluid.layers.data(name="x", shape=shape, dtype=datatype)
 y = fluid.layers.data(name="y", shape=shape, dtype=datatype)
 label = fluid.layers.data(name="label", shape=[1], dtype="int64")
 
-'''
-def net(input):
-    """
-    自解码网络
-
-    :param input: 图像张量
-    :return: 自解码后数据，原图数据
-    """
-
-    img0 = fluid.layers.fc(input=input, size=shape[0] * shape[1], act=None)
-
-    img = fluid.layers.fc(input=img0, size=128, act="tanh")
-    
-    img = fluid.layers.fc(input=img, size=64, act="tanh")
-
-    img = fluid.layers.fc(input=img, size=32, act="tanh")
-    
-    pltdata = fluid.layers.fc(img, size=3, act=None)  # 输出 XYZ坐标
-    
-    img = fluid.layers.fc(input=pltdata, size=32, act="tanh")
-
-    img = fluid.layers.fc(input=img, size=64, act="tanh")
-    
-    img = fluid.layers.fc(input=img, size=128, act="tanh")
-
-    img = fluid.layers.fc(input=img, size=shape[0] * shape[1], act="sigmoid")
-
-    img = fluid.layers.reshape(x=img, shape=[-1, shape[0], shape[1]])
-
-
-
-    return img,input,pltdata
-    
-'''
 def convolutional_neural_network(img_x,img_y):
 
     def conv(img):

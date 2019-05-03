@@ -134,8 +134,8 @@ def convolutional_neural_network(img_x,img_y):
 
         fc1 = fluid.layers.fc(input=bn2, size=1024, act='relu', name='fc1')
 
-        fc2 = fluid.layers.fc(input=fc1, size=10, act='softmax', name='fc2')
-        return fc2
+        #fc2 = fluid.layers.fc(input=fc1, size=10, act='softmax', name='fc2')
+        return fc1
 
     prediction_x=conv(img_x)
     prediction_y = conv(img_y)
