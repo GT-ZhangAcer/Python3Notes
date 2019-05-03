@@ -29,26 +29,32 @@ with open(path + "data/ocrData.txt", 'rt') as f:
 
 def dataReader():
     def redaer():
-        READ_IMG_NUM=256 #原始图片读取个数
-        IMG_RANDOM_NUM=10#产出图片个数
+        READ_IMG_NUM = 256  # 原始图片读取个数
+        IMG_RANDOM_NUM = 10  # 产出图片个数
 
-        for i in range(1,READ_IMG_NUM):
+        for i in range(1, READ_IMG_NUM):
             im = Image.open(path + "data/" + str(i) + ".jpg").convert('1')
             im_y = np.array(im).reshape(shape).astype(np.float32)
 
-            #自解码
-            for ii in range(1,IMG_RANDOM_NUM):
-
-                k=random.uniform(1.0,3.0)
+            # 自解码
+            for ii in range(1, IMG_RANDOM_NUM):
+                k = random.uniform(1.0, 3.0)
                 imx = im.resize((int(shape[1] / k), int(shape[0] / k)), Image.ANTIALIAS)
                 imx = imx.resize((shape[1], shape[0]), Image.ANTIALIAS)
 
                 im_x = np.array(imx).reshape(shape).astype(np.float32)
 
                 labelInfo = a[i - 1]
-                yield im_x, im_y,labelInfo  # 返回一个的话竟然会报错，好像是拆分了一个 啊啊啊！
+                yield im_x, im_y, labelInfo  # 返回一个的话竟然会报错，好像是拆分了一个 啊啊啊！
 
     return redaer
+
+
+def predataReader():
+    def reader():
+        CLASS_NUM = 10  # 类别数目
+        PRE_IMG_NUM = 5  # 准备单类带标签图片数目
+        for i in range()
 
 
 # 定义网络
@@ -57,12 +63,12 @@ x = fluid.layers.data(name="x", shape=shape, dtype=datatype)
 y = fluid.layers.data(name="y", shape=shape, dtype=datatype)
 label = fluid.layers.data(name="label", shape=[1], dtype="int64")
 
-def convolutional_neural_network(img_x,img_y):
 
+def convolutional_neural_network(img_x, img_y):
     def conv(img):
         # 第一个卷积-池化层
         # 使用20个5*5的滤波器，池化大小为2，池化步长为2，激活函数为Relu
-        ipt = fluid.layers.reshape(x=img, shape=[-1,1, shape[0], shape[1]])
+        ipt = fluid.layers.reshape(x=img, shape=[-1, 1, shape[0], shape[1]])
         conv1 = fluid.layers.conv2d(input=ipt,
                                     num_filters=32,
                                     filter_size=3,
@@ -100,33 +106,32 @@ def convolutional_neural_network(img_x,img_y):
         fc2 = fluid.layers.fc(input=fc1, size=10, act='softmax', name='fc2')
         return fc2
 
-    prediction_x=conv(img_x)
+    prediction_x = conv(img_x)
     prediction_y = conv(img_y)
 
-    pltdata=fluid.layers.fc(input=prediction_x,size=3,act=None)
-    return prediction_x,prediction_y,pltdata
+    pltdata = fluid.layers.fc(input=prediction_x, size=3, act=None)
+    return prediction_x, prediction_y, pltdata
 
 
 # 获取网络后数据
-#net_x,net_y,pltdata = net(x)
-net_x,net_y,pltdata=convolutional_neural_network(x,y)
+# net_x,net_y,pltdata = net(x)
+net_x, net_y, pltdata = convolutional_neural_network(x, y)
 
 # 定义损失函数 此处应设置为软标签
 cost = fluid.layers.cross_entropy(input=net_x, label=net_x, soft_label=True)
 # cost = fluid.layers.square_error_cost(input=net_x, label=net_y)
-cost=fluid.layers.abs(cost)
+cost = fluid.layers.abs(cost)
 avg_cost = fluid.layers.mean(cost)
 # 定义优化方法
 sgd_optimizer = fluid.optimizer.Adam(learning_rate=0.005)
 sgd_optimizer.minimize(avg_cost)
 
-
 # 数据传入设置
 batch_reader = paddle.batch(
-    reader=paddle.reader.shuffle(reader=dataReader(),buf_size=3000),
+    reader=paddle.reader.shuffle(reader=dataReader(), buf_size=3000),
     batch_size=512)
 # batch_reader = paddle.batch(mnist.train(), batch_size=128)
-feeder = fluid.DataFeeder(place=place, feed_list=[x, y,label])  # V1.4版本 不可以只传入一个数据
+feeder = fluid.DataFeeder(place=place, feed_list=[x, y, label])  # V1.4版本 不可以只传入一个数据
 prog = fluid.default_startup_program()
 exe.run(prog)
 
@@ -134,13 +139,11 @@ trainNum = 200
 for i in range(trainNum):
     outs = []
     for batch_id, data in enumerate(batch_reader()):
-
         outs = exe.run(
             feed=feeder.feed(data),
-            fetch_list=[avg_cost, pltdata,label])  # feed为数据表 输入数据和标签数据
+            fetch_list=[avg_cost, pltdata, label])  # feed为数据表 输入数据和标签数据
 
     print(str(i + 1) + "次训练后损失值为：" + str(outs[0]))
-
 
     # 绘图-3D
     fig = plt.figure()
@@ -167,7 +170,6 @@ for i in range(trainNum):
     plt.show()
     pross = float(i) / trainNum
     print("当前训练进度百分比为：" + str(pross * 100)[:3].strip(".") + "%")
-
 
 # 保存预测模型
 path = params_dirname
