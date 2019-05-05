@@ -10,6 +10,11 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import random
 
+# 超参数
+CLASS_NUM = 10  # 类别数目
+PRE_IMG_NUM = 5  # 准备单类带标签图片数目
+LABEL_DIM=3 #分类维度，越高越精确
+
 # 指定路径
 path = Class_OS.o1_获得当前工作目录.main()
 params_dirname = path + "test02.inference.model"
@@ -33,7 +38,7 @@ def dataReader():
         IMG_RANDOM_NUM = 10  # 产出图片个数
 
         for i in range(1, READ_IMG_NUM):
-            im = Image.open(path + "data/" + str(i) + ".jpg").convert('1')
+            im = Image.open(path + "data/" + str(i) + ".jpg").convert('L')
             im_y = np.array(im).reshape(shape).astype(np.float32)
 
             # 自解码
@@ -50,11 +55,15 @@ def dataReader():
     return redaer
 
 
-def predataReader():
+def preDataReader():
     def reader():
-        CLASS_NUM = 10  # 类别数目
-        PRE_IMG_NUM = 5  # 准备单类带标签图片数目
-        for i in range()
+        for i in range(CLASS_NUM * PRE_IMG_NUM):
+            im = Image.open("./OCRData/" + str(i) + ".jpg").convert("L")
+            im = np.array(im).reshape(shape).astype(np.float32)
+            labelInfo = str(i // 5)
+            yield im, labelInfo
+
+    return reader()
 
 
 # 定义网络
@@ -85,23 +94,7 @@ def convolutional_neural_network(img_x, img_y):
 
         bn1 = fluid.layers.batch_norm(input=pool1, name='bn1')
 
-        conv2 = fluid.layers.conv2d(input=bn1,
-                                    num_filters=64,
-                                    filter_size=3,
-                                    padding=1,
-                                    stride=1,
-                                    name='conv2',
-                                    act='relu')
-
-        pool2 = fluid.layers.pool2d(input=conv2,
-                                    pool_size=2,
-                                    pool_stride=2,
-                                    pool_type='max',
-                                    name='pool2')
-
-        bn2 = fluid.layers.batch_norm(input=pool2, name='bn2')
-
-        fc1 = fluid.layers.fc(input=bn2, size=1024, act='relu', name='fc1')
+        fc1 = fluid.layers.fc(input=bn1, size=1024, act='relu', name='fc1')
 
         fc2 = fluid.layers.fc(input=fc1, size=10, act='softmax', name='fc2')
         return fc2
@@ -127,6 +120,12 @@ sgd_optimizer = fluid.optimizer.Adam(learning_rate=0.005)
 sgd_optimizer.minimize(avg_cost)
 
 # 数据传入设置
+
+# 人工标签传入
+prebatch_reader = paddle.batch(
+    reader=preDataReader(),
+    batch_size=CLASS_NUM * PRE_IMG_NUM)
+# 原始数据传入
 batch_reader = paddle.batch(
     reader=paddle.reader.shuffle(reader=dataReader(), buf_size=3000),
     batch_size=512)
@@ -135,6 +134,12 @@ feeder = fluid.DataFeeder(place=place, feed_list=[x, y, label])  # V1.4版本 �
 prog = fluid.default_startup_program()
 exe.run(prog)
 
+
+#预训练
+
+
+
+#最终训练
 trainNum = 200
 for i in range(trainNum):
     outs = []

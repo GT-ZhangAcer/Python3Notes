@@ -1,14 +1,11 @@
 from PIL import Image
-
+import numpy as np
+from Class_PaddlePaddle.test03_Autoimg2.torNN import TorNN
 
 import Class_OS.o1_获得当前工作目录
 
+q = [[1, 1, 1, 1], [0, 0, 0, 0], [3, 3, 3, 3], [4, 4, 4, 4], [5, 5, 5, 5], [6, 6, 6, 6], [7, 7, 7, 7]]
+a = [[1, 1, 1, 1], [0, 0, 0, 0], [3, 3, 3, 3], [4, 4, 4, 4], [5, 5, 5, 5], [6, 6, 6, 6], [7, 7, 7, 7]]
 
-# 指定路径
-path = Class_OS.o1_获得当前工作目录.main()
-shape = [3, 30, 15]
-im = Image.open(path + "data/5.jpg")
-for i in range(5):
-    im = im.resize((shape[2] // 2, shape[1] // 2), Image.ANTIALIAS)
-    im = im.resize((shape[2], shape[1]), Image.ANTIALIAS)
-im.show()
+obj = TorNN(q, a)
+print(obj.metaNorm())
