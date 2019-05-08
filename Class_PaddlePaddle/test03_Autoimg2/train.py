@@ -89,7 +89,7 @@ def convolutional_neural_network(img):
 torNNBase = fluid.Program()  # 基准元训练
 torNNBigMeta = fluid.Program()  # 元训练
 startup = fluid.Program()  # 默认启动程序
-#startup = fluid.default_startup_program()
+
 
 
 # torNN基准元训练项目
@@ -120,9 +120,13 @@ feeder = fluid.DataFeeder(place=place, feed_list=[x, label])
 
 exe.run(startup)
 
+testdata=[]
 # 预训练-TorNNBase
 for batch_id, data in enumerate(prebatch_reader()):
     outs = exe.run(program=torNNBase,
                    feed=prefeeder.feed(data),
-                   fetch_list=[label, avg_cost_Base])
-    print(outs[1])
+                   fetch_list=[label,net_x_Base, avg_cost_Base])
+    label_data,net_x_Base_data, avg_cost_Base_data=outs
+    for i in range(len(label_data)):
+        testdata.append([label_data[i],net_x_Base_data[i]])
+pass

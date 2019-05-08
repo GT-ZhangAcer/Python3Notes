@@ -108,11 +108,12 @@ class TorNN:
             normLong.append(numpy.linalg.norm(a - b).tolist())
         return normLong
 
-    def classsify(self, expansion_rate=None):
+    def classsify(self, expansion_rate=None,debug=None):
         '''
 
         :param expansion_rate: 扩张率 默认为1 越大学习越快，准确率越低
-        :return:
+        :return:[[已分类:[标签，点ID],[标签，点ID],...],[未分类:[点ID],...]]
+        <class 'list'>: [[0, 0], [0, 1], [1, 3], [1, 5], [1, 4], [0, 2]],[[6]]
         '''
         classifyTrue = []
         classifyFalse = []
@@ -137,9 +138,10 @@ class TorNN:
                 classifyFalse.append(pointID)
         classifyFalse=list(set(classifyFalse))
         falseNum = self.oriNum - tureNum
-        print("|成功分类个数：",tureNum,"未分类数：",  falseNum)
-        print(classifyTrue)
-        print(classifyFalse)
-        return
+        if debug is not None:
+            print("|TorNN|成功分类个数：", tureNum, "未分类数：", falseNum)
+            print(classifyTrue)
+            print(classifyFalse)
+        return classifyTrue,classifyFalse
     def lossPre(self):
         pass
