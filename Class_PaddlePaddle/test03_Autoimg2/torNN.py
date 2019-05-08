@@ -8,39 +8,36 @@ class TorNN:
     初始化输入类型：
     oridata 1xN1xM 1x图片个数x神经元返回的维度
     M=3 三类:[[0, 1, 1], [1, 2, 1], [2, 2, 1], [5, 4, 4], [4, 5, 5], [4, 5, 4], [9, 9, 9]]
-    predata 1xCxNxM 1x类别x图片个数x神经元返回的维度
+    predata 1xCxNxM 1x类别Labelx图片个数x神经元返回的维度
     M=3 两类:[[[1, 1, 1], [2, 1, 1], [2, 1, 2], [1, 1, 2]], [[4, 5, 5], [5, 4, 4], [4, 4, 4]]]
 
-    classify_scale 分类精度比例 越低越精确
-    expansion_multiple
+    expansion_rate 扩充效率 默认为1
     '''
 
-    def __init__(self, oridata, predata, classify_scale=0.3,expansion_multiple=5):
+    def __init__(self, oridata, predata, expansion_rate=1):
         self.oriData = oridata
         self.preData = predata
-        self.classsify_scale = classify_scale
-        self.expansion_multiple=expansion_multiple
+        self.expansion_rate = expansion_rate
         # Dim数据计算
         self.oriDim = len(oridata[0])
         self.preDim = len(predata[0][0])
-        if self.oriDim != self.preDim:
-            print("神经元返回数据尺寸不符")
-            return
+        assert self.oriDim == self.preDim, "神经元返回数据尺寸不相同"
+
         # 图片数量计算
         self.oriNum = len(oridata)
+        print("|总需要分类的数据个数为:", self.oriNum)
         # 类别数量计算
-        # self.classsifyName=[i[1] for i in predata]
-        # self.classsifyName=set(self.classsifyName)
         self.classsifyNum = len(predata)
 
     def metaNorm(self, predata=None):
         if predata is None:
             predata = self.preData
         '''
-        各元-欧式距离计算-各取出中心点
+        各元-欧式距离计算-各取出中心点、最远点
         :return: 类别-最小点数据 [[C,M],[...]...]
         '''
-        metaNormlist = []
+        metaNormMin = []
+        metaNormMax = []
         for data in predata:
             allNormData = []  # 存放各点与各点之间的欧氏距离
             allSumNorm = []  # 存放各点的欧式距离和
@@ -62,19 +59,23 @@ class TorNN:
             minNorm = str(min(allSumNorm))[:-1]
             minID = [str(i)[:-1] for i in allSumNorm]  # 转换str类型 防止数字变动
             minID = minID.index(minNorm)  # 找出最中心点
-            metaNormlist.append(data[minID])
+            metaNormMin.append(data[minID])
+            minNorm = str(max(allSumNorm))[:-1]
+            minID = [str(i)[:-1] for i in allSumNorm]  # 转换str类型 防止数字变动
+            minID = minID.index(minNorm)  # 找出最中心点
+            metaNormMax.append(data[minID])
             '''
-            metaNormlist返回类型 [[fcData],[]...]...
-            <class 'list'>: [[1, 1, 1], [4, 4, 4]]
+            metaNormlist返回类型 [[fcData1Min],[fcData2Min],[fcData1Max],[fcData2Max]...]...
+            <class 'list'>: [[1, 1, 1], [4, 4, 4]], [[2, 1, 2], [4, 5, 5]]
             '''
-        return metaNormlist
+        return metaNormMin, metaNormMax
 
     def p2meta(self):
         '''
-        各元与各点之间的欧氏距离计算
+        各元与各点之间的欧氏距离计算|各点与点之间欧氏距离
         :return: 计算数据
         '''
-        metaNormlist = self.metaNorm()  # 引入元中心点数据
+        metaNormlist = self.metaNorm()[0]  # 引入元最近中心点数据
         allNormData = []  # 存放各点与各元之间的欧氏距离
 
         for id1, i in enumerate(metaNormlist):
@@ -87,18 +88,58 @@ class TorNN:
                 normLong = numpy.linalg.norm(i - ii).tolist()
                 allNormData.append([id1, id2, float(str(normLong)[:8])])  # 精度为8位
             '''
-               allNormData结果类型 [[id1,id2,欧氏距离],[...]...]
+               allNormData结果类型 [[元id,点id,欧氏距离],[...]...]
                <class 'list'>: [[0, 0, 1.0], [0, 1, 1.0], [0, 2, 1.414213], [0, 3, 5.830951], [0, 4, 6.403124], [0, 5, 5.830951], [0, 6, 13.8564], [1, 0, 5.830951], [1, 1, 4.690415], [1, 2, 4.123105], [1, 3, 1.0], [1, 4, 1.414213], [1, 5, 1.0], [1, 6, 8.660254]]
             '''
         return allNormData
 
-    def classsify(self):
-        allNormData = self.p2meta()  # 引入各元与各点之间的欧氏距离
-        sortData = sorted(allNormData, key=lambda norm: norm[2])
-        print(sortData)
-        normNum = [i[2] for i in allNormData]
-        print("average", sum(normNum) / len(allNormData))
-        print("max", max(normNum))
+    def p2p(self, aList, bList):
+        '''
+        点与对应点之间欧氏距离
+        :param aList: 点a列表 [[1, 1, 1], [4, 4, 4]]
+        :param bList: 点b列表 [[2, 1, 2], [4, 5, 5]]
+        :return: 欧氏距离列表[1,2,3]
+        '''
+        assert len(aList) == len(bList), "点数据非一一对应关系"
+        normLong = []
+        for i in range(len(aList)):
+            a = numpy.array(aList[i])
+            b = numpy.array(bList[i])
+            normLong.append(numpy.linalg.norm(a - b).tolist())
+        return normLong
 
+    def classsify(self, expansion_rate=None):
+        '''
+
+        :param expansion_rate: 扩张率 默认为1 越大学习越快，准确率越低
+        :return:
+        '''
+        classifyTrue = []
+        classifyFalse = []
+        if expansion_rate is None:
+            expansion_rate = self.expansion_rate
+
+        metaNormMin, metaNormMax = self.metaNorm()  # 引入最远与中心点的点数据
+        metaNormList = [i * expansion_rate for i in self.p2p(metaNormMax, metaNormMin)]  # 引入最大可承受距离列表
+        print(metaNormList)
+        allNormData = self.p2meta()  # 引入各元与各点之间的欧氏距离
+        sortData = sorted(allNormData, key=lambda norm: norm[2])  # 按距离值从小到大排序
+
+        tureNum = 0  # 成功分类的数量
+        pointIDTrue=[]
+        for i in sortData:
+            metaID, pointID, thisNorm = i
+            if (metaNormList[metaID] >= thisNorm) and (pointID not in pointIDTrue):
+                classifyTrue.append([metaID, pointID])
+                pointIDTrue.append(pointID)
+                tureNum += 1
+            elif pointID not in pointIDTrue:
+                classifyFalse.append(pointID)
+        classifyFalse=list(set(classifyFalse))
+        falseNum = self.oriNum - tureNum
+        print("|成功分类个数：",tureNum,"未分类数：",  falseNum)
+        print(classifyTrue)
+        print(classifyFalse)
+        return
     def lossPre(self):
         pass

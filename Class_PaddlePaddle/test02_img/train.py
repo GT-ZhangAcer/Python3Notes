@@ -74,7 +74,7 @@ def testReader():
 x = fluid.layers.data(name="x", shape=[1, 30, 15], dtype=datatype)
 label = fluid.layers.data(name='label', shape=[1], dtype='int64')
 
-sss=0
+
 def cnn(ipt):
     conv1 = fluid.layers.conv2d(input=ipt,
                                 num_filters=32,
