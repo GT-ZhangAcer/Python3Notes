@@ -122,7 +122,6 @@ class TorNN:
 
         metaNormMin, metaNormMax = self.metaNorm()  # 引入最远与中心点的点数据
         metaNormList = [i * expansion_rate for i in self.p2p(metaNormMax, metaNormMin)]  # 引入最大可承受距离列表
-        print(metaNormList)
         allNormData = self.p2meta()  # 引入各元与各点之间的欧氏距离
         sortData = sorted(allNormData, key=lambda norm: norm[2])  # 按距离值从小到大排序
 
@@ -140,8 +139,8 @@ class TorNN:
         falseNum = self.oriNum - tureNum
         if debug is not None:
             print("|TorNN|成功分类个数：", tureNum, "未分类数：", falseNum)
-            print(classifyTrue)
-            print(classifyFalse)
+            print("|成功：",classifyTrue)
+            print("|未分类：",classifyFalse)
         return classifyTrue,classifyFalse
     def lossPre(self):
         pass

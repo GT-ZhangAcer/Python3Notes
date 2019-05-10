@@ -43,15 +43,24 @@ def preDataReader():
 
     return reader
 
-
 def dataReader():
     def redaer():
-        READ_IMG_NUM = 1024  # 原始图片读取个数
-        for i in range(1, READ_IMG_NUM):
+        READ_IMG_NUM=1024 #原始图片读取个数
+        for i in range(1,READ_IMG_NUM):
+            im = Image.open(path + "data/" + str(i) + ".jpg").convert("L")
+            im = np.array(im).reshape(1, 30, 15).astype(np.float32)
+            im = im / 255.0 * 2.0 - 1.0
+            labelInfo = a[i - 1]
+            yield im,labelInfo  # 返回一个的话竟然会报错，好像是拆分了一个 啊啊啊！
+    return redaer
+
+def dataReader2(load_list):
+    def redaer():
+        for i in load_list:
             im = Image.open(path + "data/" + str(i) + ".jpg").convert('L')
             im = np.array(im).reshape(1, 30, 15).astype(np.float32)
-            labelInfo = a[i - 1]
-            yield im, labelInfo  # 返回一个的话竟然会报错，好像是拆分了一个 啊啊啊！
+            label=a[i]
+            yield im, label  # 返回一个的话竟然会报错，好像是拆分了一个 啊啊啊！
 
     return redaer
 
@@ -80,7 +89,7 @@ def convolutional_neural_network(img):
 
     fc1 = fluid.layers.fc(input=bn1, size=1024, act='relu', name='fc1')
 
-    fc2 = fluid.layers.fc(input=fc1, size=10, act='softmax', name='fc2')
+    fc2 = fluid.layers.fc(input=fc1, size=10, act=None, name='fc2')
     pltdata = fluid.layers.fc(input=fc2, size=3, act=None)
     return fc2, pltdata
 
@@ -90,21 +99,22 @@ torNNBase = fluid.Program()  # 基准元训练
 torNNBigMeta = fluid.Program()  # 元训练
 startup = fluid.Program()  # 默认启动程序
 
-
-
+# torNN训练项目模版
+def torNNProgram(main_program):
+    with fluid.program_guard(main_program=main_program, startup_program=startup):
+        x = fluid.layers.data(name="x", shape=[1, 30, 15], dtype='float32')
+        label = fluid.layers.data(name="label", shape=[1], dtype="int64")
+        net_x_Base, _ = convolutional_neural_network(x)  # 获取网络
+        # 定义损失函数
+        cost_Base = fluid.layers.cross_entropy(input=net_x_Base, label=label)
+        avg_cost_Base = fluid.layers.mean(cost_Base)
+        acc = fluid.layers.accuracy(input=net_x_Base, label=label, k=1)
+        # 定义优化方法
+        sgd_optimizer = fluid.optimizer.SGD(learning_rate=0.01)
+        sgd_optimizer.minimize(avg_cost_Base)
+        return x,label, net_x_Base, avg_cost_Base
 # torNN基准元训练项目
-with fluid.program_guard(main_program=torNNBase, startup_program=startup):
-    x = fluid.layers.data(name="x", shape=[1, 30, 15], dtype='float32')
-    label = fluid.layers.data(name="label", shape=[1], dtype="int64")
-    net_x_Base, _ = convolutional_neural_network(x)  # 获取网络
-    # 定义损失函数
-    cost_Base = fluid.layers.cross_entropy(input=net_x_Base, label=label)
-    avg_cost_Base = fluid.layers.mean(cost_Base)
-    acc = fluid.layers.accuracy(input=net_x_Base, label=label, k=1)
-    # 定义优化方法
-    sgd_optimizer = fluid.optimizer.SGD(learning_rate=0.01)
-    sgd_optimizer.minimize(avg_cost_Base)
-
+x,label, net_x_Base, avg_cost_Base=torNNProgram(torNNBase)
 # 数据传入设置
 
 # 人工标签传入
@@ -112,21 +122,68 @@ prebatch_reader = paddle.batch(
     reader=preDataReader(),
     batch_size=512)
 prefeeder = fluid.DataFeeder(place=place, feed_list=[x, label])
-# 原始数据传入
 batch_reader = paddle.batch(
     reader=dataReader(),
-    batch_size=512)
+    batch_size=1024)
 feeder = fluid.DataFeeder(place=place, feed_list=[x, label])
 
 exe.run(startup)
 
-testdata=[]
 # 预训练-TorNNBase
-for batch_id, data in enumerate(prebatch_reader()):
+TRAINNUM = 100
+
+# 初始化分类列表
+basedata = []
+oridata = []
+for i in range(CLASS_NUM):
+    basedata.append([])
+
+for i in range(TRAINNUM):
+
+    for batch_id, data in enumerate(prebatch_reader()):
+        # 获取训练数据
+        outs = exe.run(program=torNNBase,
+                       feed=prefeeder.feed(data),
+                       fetch_list=[label, net_x_Base, avg_cost_Base])
+        if i == TRAINNUM - 1:
+            # 按格式记录数据
+            label_data, net_x_Base_data, avg_cost_Base_data = outs
+            for i in range(len(label_data)):
+                index = label_data[i].tolist()[0]
+                basedata[index].append(net_x_Base_data[i].tolist())
+
+for batch_id, data in enumerate(batch_reader()):
+    # 获取训练数据
     outs = exe.run(program=torNNBase,
-                   feed=prefeeder.feed(data),
-                   fetch_list=[label,net_x_Base, avg_cost_Base])
-    label_data,net_x_Base_data, avg_cost_Base_data=outs
-    for i in range(len(label_data)):
-        testdata.append([label_data[i],net_x_Base_data[i]])
+                   feed=feeder.feed(data),
+                   fetch_list=[net_x_Base])
+    oridata = outs[0].tolist()
+
+baseTor = TorNN(oridata, basedata)
+baseTorT, _ = baseTor.classsify(expansion_rate=1, debug=True)
+baseTorTrueNum = 0
+final_id_list=[]
+for i in baseTorT:
+    labeli = a[i[1]]
+    final_id_list.append(i[1])
+    if str(labeli) == str(i[0]):
+        baseTorTrueNum += 1
+        print("True")
+    else:
+        print("False")
+print("True rate:", str(baseTorTrueNum / len(baseTorT) * 100)[:4])
+
+# 原始数据传入
+batch_reader = paddle.batch(
+    reader=dataReader2(final_id_list),
+    batch_size=1024)
+feeder = fluid.DataFeeder(place=place, feed_list=[x, label])
+
+for batch_id, data in enumerate(batch_reader()):
+    # 获取训练数据
+    outs = exe.run(program=torNNBase,
+                   feed=feeder.feed(data),
+                   fetch_list=[net_x_Base])
+    oridata = outs[0].tolist()
+
 pass
