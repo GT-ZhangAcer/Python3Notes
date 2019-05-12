@@ -125,6 +125,7 @@ class TorNN:
         allNormData = self.p2meta()  # 引入各元与各点之间的欧氏距离
         sortData = sorted(allNormData, key=lambda norm: norm[2])  # 按距离值从小到大排序
 
+
         tureNum = 0  # 成功分类的数量
         pointIDTrue=[]
         for i in sortData:
@@ -141,6 +142,7 @@ class TorNN:
             print("|TorNN|成功分类个数：", tureNum, "未分类数：", falseNum)
             print("|成功：",classifyTrue)
             print("|未分类：",classifyFalse)
+            sortData2 = sorted(allNormData, key=lambda norm: norm[1])
         return classifyTrue,classifyFalse
     def lossPre(self):
         pass
