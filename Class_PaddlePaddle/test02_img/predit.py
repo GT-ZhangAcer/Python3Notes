@@ -12,8 +12,8 @@ print("训练后文件夹路径" + params_dirname)
 
 
 def dataReader(i):
-    im = Image.open(path + "dataOri/" + str(i) + ".jpg").convert('L')
-    im = numpy.array(im).reshape(1, 1, 30, 70).astype(numpy.float32)
+    im = Image.open(path + "data/" + str(i) + ".jpg").convert('L')
+    im = numpy.array(im).reshape(1, 1, 30, 15).astype(numpy.float32)
     im = im / 255.0 * 2.0 - 1.0
     return im
 with open(path + "data/ocrData.txt", 'rt') as f:
@@ -32,7 +32,7 @@ exe.run(prog)
 # 加载模型
 [inference_program, feed_target_names, fetch_targets] = fluid.io.load_inference_model(params_dirname, exe)
 
-for i in range(1):
+for i in range(1,5):
     img=dataReader(i)
     results = exe.run(inference_program,
         feed={feed_target_names[0]: img},

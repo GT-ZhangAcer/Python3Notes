@@ -88,9 +88,7 @@ def convolutional_neural_network(img,name):
 
         bn1 = fluid.layers.batch_norm(input=pool1)
 
-        fc1 = fluid.layers.fc(input=bn1, size=1024, act='relu')
-
-        fc2 = fluid.layers.fc(input=fc1, size=10, act='relu')
+        fc2 = fluid.layers.fc(input=bn1, size=10, act='relu')
         pltdata = fluid.layers.fc(input=fc2, size=3, act=None)
         return fc2, pltdata
 
@@ -132,7 +130,7 @@ prebatch_reader = paddle.batch(
 prefeeder = fluid.DataFeeder(place=place, feed_list=[x, label])
 batch_reader = paddle.batch(
     reader=dataReader(),
-    batch_size=1024)
+    batch_size=2048)
 feeder = fluid.DataFeeder(place=place, feed_list=[x, label])
 
 exe.run(startup)

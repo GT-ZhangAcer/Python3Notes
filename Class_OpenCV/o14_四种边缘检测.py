@@ -3,7 +3,7 @@ import Class_OS.o1_获得当前工作目录
 
 #指定路径
 path=Class_OS.o1_获得当前工作目录.main()+"Testimg/"
-file=path+"cloth.jpg"
+file=path+"wood.jpg"
 
 img=cv.imread(file)
 cv.imshow("Src",img)
