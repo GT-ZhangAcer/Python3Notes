@@ -92,7 +92,29 @@ def convolutional_neural_network(img,name):
         pltdata = fluid.layers.fc(input=fc2, size=3, act=None)
         return fc2, pltdata
 
+def convolutional_neural_network2(img,name):
+    # 第一个卷积-池化层
+    # 使用20个5*5的滤波器，池化大小为2，池化步长为2，激活函数为Relu
+    with fluid.unique_name.guard(name + "/"):
+        ipt2 = fluid.layers.reshape(x=img, shape=[-1, 1, 30, 15])
+        conv21 = fluid.layers.conv2d(input=ipt2,
+                                    num_filters=32,
+                                    filter_size=3,
+                                    padding=1,
+                                    stride=1,
+                                    act='relu')
 
+        pool21 = fluid.layers.pool2d(input=conv21,
+                                    pool_size=2,
+                                    pool_stride=2,
+                                    pool_type='max')
+
+        bn21 = fluid.layers.batch_norm(input=pool21)
+
+        fc22 = fluid.layers.fc(input=bn21, size=10, act='relu')
+
+        pltdata2 = fluid.layers.fc(input=fc22, size=3, act=None)
+        return fc22, pltdata2
 
 # 创建分支程序用于TorNN初始化
 torNNBase = fluid.Program()  # 基准元训练
@@ -108,18 +130,18 @@ with fluid.program_guard(main_program=torNNBase, startup_program=startup):
     cost_Base = fluid.layers.cross_entropy(input=net_x_Base, label=label)
     avg_cost_Base = fluid.layers.mean(cost_Base)
     # 定义优化方法
-    sgd_optimizer = fluid.optimizer.SGD(learning_rate=0.01)
+    sgd_optimizer = fluid.optimizer.Adam(learning_rate=0.01)
     sgd_optimizer.minimize(avg_cost_Base)
 
 with fluid.program_guard(main_program=final_program, startup_program=startup):
     x_f = fluid.layers.data(name="x_f", shape=[1, 30, 15], dtype='float32')
     label_f = fluid.layers.data(name="label_f", shape=[1], dtype="int64")
-    net_x_Base_f, pltdata = convolutional_neural_network(x_f,"final_program")  # 获取网络
+    net_x_Base_f, pltdata = convolutional_neural_network2(x_f,"final_program")  # 获取网络
     # 定义损失函数
     cost_Base_f = fluid.layers.cross_entropy(input=net_x_Base_f, label=label_f)
     avg_cost_Base_f = fluid.layers.mean(cost_Base_f)
     # 定义优化方法
-    sgd_optimizer_f = fluid.optimizer.SGD(learning_rate=0.01)
+    sgd_optimizer_f = fluid.optimizer.Adam(learning_rate=0.01)
     sgd_optimizer_f.minimize(avg_cost_Base_f)
 # 数据传入设置
 
@@ -136,49 +158,58 @@ feeder = fluid.DataFeeder(place=place, feed_list=[x, label])
 exe.run(startup)
 
 # 预训练-TorNNBase
-TRAINNUM = 100
+TRAINNUM = 300
 
 # 初始化分类列表
+'''
 basedata = []
 oridata = []
 for i in range(CLASS_NUM):
     basedata.append([])
+'''
+for train_num,i in enumerate(range(TRAINNUM)):
 
-for i in range(TRAINNUM):
+    basedata = []
+    oridata = []
+    for i in range(CLASS_NUM):
+        basedata.append([])
 
     for batch_id, data in enumerate(prebatch_reader()):
         # 获取训练数据
         outs = exe.run(program=torNNBase,
                        feed=prefeeder.feed(data),
                        fetch_list=[label, net_x_Base, avg_cost_Base])
-        if i == TRAINNUM - 1:
-            # 按格式记录数据
-            label_data, net_x_Base_data, avg_cost_Base_data = outs
-            for i in range(len(label_data)):
-                index = label_data[i].tolist()[0]
-                basedata[index].append(net_x_Base_data[i].tolist())
+        # 按格式记录数据
+        label_data, net_x_Base_data, avg_cost_Base_data = outs
+        for i in range(len(label_data)):
+            index = label_data[i].tolist()[0]
+            basedata[index].append(net_x_Base_data[i].tolist())
 
-for batch_id, data in enumerate(batch_reader()):
-    # 获取训练数据
-    outs = exe.run(program=torNNBase,
-                   feed=feeder.feed(data),
-                   fetch_list=[net_x_Base])
-    oridata = outs[0].tolist()
 
-baseTor = TorNN(oridata, basedata)
-baseTorT, _ = baseTor.classsify(expansion_rate=1, debug=True)
-baseTorTrueNum = 0
-final_id_list = []
-for i in baseTorT:
-    labeli = a[i[1]]
-    final_id_list.append([i[1], i[0]])
-    if str(labeli) == str(i[0]):
-        baseTorTrueNum += 1
-        #print("True")
-    #else:
-        #print("False")
-print("True rate:", str(baseTorTrueNum / len(baseTorT) * 100)[:4])
+    for batch_id, data in enumerate(batch_reader()):
+        # 获取训练数据
+        outs = exe.run(program=torNNBase,
+                       feed=feeder.feed(data),
+                       fetch_list=[net_x_Base])
+        oridata = outs[0].tolist()
 
+    baseTor = TorNN(oridata, basedata)
+    baseTorT, _ = baseTor.classsify(expansion_rate=1)
+    baseTorTrueNum = 0
+    final_id_list = []
+    for i in baseTorT:
+        labeli = a[i[1]]
+        final_id_list.append([i[1], i[0]])
+        if str(labeli) == str(i[0]):
+            baseTorTrueNum += 1
+            #print("True")
+        #else:
+            #print("False")
+    if not baseTorT:
+        continue
+    print("True rate:", train_num,str(baseTorTrueNum / len(baseTorT) * 100)[:4])
+
+'''
 # 原始数据传入
 batch_reader2 = paddle.batch(
     reader=dataReader2(final_id_list),
@@ -224,6 +255,8 @@ for i in baseTorT:
     else:
         print("False")
 print("True rate2:", str(baseTorTrueNum / len(baseTorT) * 100)[:4])
+
+'''
 
 
 pass

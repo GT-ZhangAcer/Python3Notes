@@ -25,7 +25,7 @@ class TorNN:
 
         # 图片数量计算
         self.oriNum = len(oridata)
-        print("|总需要分类的数据个数为:", self.oriNum)
+
         # 类别数量计算
         self.classsifyNum = len(predata)
 
@@ -139,6 +139,7 @@ class TorNN:
         classifyFalse=list(set(classifyFalse))
         falseNum = self.oriNum - tureNum
         if debug is not None:
+            print("|总需要分类的数据个数为:", self.oriNum)
             print("|TorNN|成功分类个数：", tureNum, "未分类数：", falseNum)
             print("|成功：",classifyTrue)
             print("|未分类：",classifyFalse)
