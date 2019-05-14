@@ -11,13 +11,15 @@ class TorNN:
     predata 1xCxNxM 1x类别Labelx图片个数x神经元返回的维度
     M=3 两类:[[[1, 1, 1], [2, 1, 1], [2, 1, 2], [1, 1, 2]], [[4, 5, 5], [5, 4, 4], [4, 4, 4]]]
 
-    expansion_rate 扩充效率 默认为1
+    expansion_rate [建议范围 0.1-2]扩充效率 默认为1 越大分类结果越多 精度越低
+    classify_True_rate [建议范围 0.1-2]分类精确度 默认为1 越高分类越精确 结果越少
     '''
 
-    def __init__(self, oridata, predata, expansion_rate=1):
+    def __init__(self, oridata, predata, expansion_rate=1, classify_True_rate=2):
         self.oriData = oridata
         self.preData = predata
         self.expansion_rate = expansion_rate
+        self.classify_True_rate = classify_True_rate
         # Dim数据计算
         self.oriDim = len(oridata[0])
         self.preDim = len(predata[0][0])
@@ -108,10 +110,11 @@ class TorNN:
             normLong.append(numpy.linalg.norm(a - b).tolist())
         return normLong
 
-    def classsify(self, expansion_rate=None,debug=None):
+    def classsify(self, expansion_rate=None, debug=None, classify_True_rate=None):
         '''
 
-        :param expansion_rate: 扩张率 默认为1 越大学习越快，准确率越低
+        :param expansion_rate [建议范围 0.1-2]扩充效率 默认为1 越大分类结果越多 精度越低
+                classify_True_rate [建议范围 0.1-2]分类精确度 默认为1 越高分类越精确 结果越少
         :return:[[已分类:[标签，点ID],[标签，点ID],...],[未分类:[点ID],...]]
         <class 'list'>: [[0, 0], [0, 1], [1, 3], [1, 5], [1, 4], [0, 2]],[[6]]
         '''
@@ -120,30 +123,53 @@ class TorNN:
         if expansion_rate is None:
             expansion_rate = self.expansion_rate
 
-        metaNormMin, metaNormMax = self.metaNorm()  # 引入最远与中心点的点数据
-        metaNormList = [i * expansion_rate for i in self.p2p(metaNormMax, metaNormMin)]  # 引入最大可承受距离列表
-        allNormData = self.p2meta()  # 引入各元与各点之间的欧氏距离
-        sortData = sorted(allNormData, key=lambda norm: norm[2])  # 按距离值从小到大排序
+        if classify_True_rate is None:
+            classify_True_rate = self.classify_True_rate
 
+        metaNormMin, metaNormMax = self.metaNorm()  # 引入最远与中心点的点数据
+        metaNormList = [i * expansion_rate for i in self.p2p(metaNormMax, metaNormMin)]  # 引入最大半径列表
+        allNormData = self.p2meta()  # 引入各元与各点之间的欧氏距离
+
+        # 去除高不确定点
+        sortData0 = sorted(allNormData, key=lambda norm: norm[1])
+        sortDatalist = []
+        for i in range(len(sortData0) // self.oriDim):
+            sortDatalist.append([])
+        for i in sortData0:
+            sortDatalist[i[1]].append([i[0],i[2]])
+
+        sortData1 = []
+        for id,itam in enumerate(sortDatalist):
+            itam.sort(key=lambda x: x[1])
+            if abs(itam[1][1] - itam[0][1]) > abs(itam[2][1] - itam[1][1]) * self.classify_True_rate:
+                for i in itam:
+                    sortData1.append([i[0],id,i[1]])
+
+
+        sortData = sorted(sortData1, key=lambda norm: norm[2])  # 按距离值从小到大排序
 
         tureNum = 0  # 成功分类的数量
-        pointIDTrue=[]
+        pointIDTrue = []
+        pointData=[]#已分类点数据
         for i in sortData:
             metaID, pointID, thisNorm = i
-            if (metaNormList[metaID] >= thisNorm) and (pointID not in pointIDTrue):
+            if (metaNormList[metaID] >= thisNorm) and (pointID not in pointData):
                 classifyTrue.append([metaID, pointID])
                 pointIDTrue.append(pointID)
+                pointData.append(pointID)
                 tureNum += 1
-            elif pointID not in pointIDTrue:
+            elif pointID not in pointData:
                 classifyFalse.append(pointID)
-        classifyFalse=list(set(classifyFalse))
+                pointData.append(pointID)
+        classifyFalse = list(set(classifyFalse))
         falseNum = self.oriNum - tureNum
         if debug is not None:
             print("|总需要分类的数据个数为:", self.oriNum)
             print("|TorNN|成功分类个数：", tureNum, "未分类数：", falseNum)
-            print("|成功：",classifyTrue)
-            print("|未分类：",classifyFalse)
-            sortData2 = sorted(allNormData, key=lambda norm: norm[1])
-        return classifyTrue,classifyFalse
+            print("|成功：", classifyTrue)
+            print("|未分类：", classifyFalse)
+
+        return classifyTrue, classifyFalse
+
     def lossPre(self):
         pass

@@ -194,7 +194,7 @@ for train_num,i in enumerate(range(TRAINNUM)):
         oridata = outs[0].tolist()
 
     baseTor = TorNN(oridata, basedata)
-    baseTorT, _ = baseTor.classsify(expansion_rate=1)
+    baseTorT, _ = baseTor.classsify(expansion_rate=1,debug=True)
     baseTorTrueNum = 0
     final_id_list = []
     for i in baseTorT:
