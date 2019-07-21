@@ -32,17 +32,16 @@ exe.run(prog)
 # 加载模型
 [inference_program, feed_target_names, fetch_targets] = fluid.io.load_inference_model(params_dirname, exe)
 
-for i in range(1,5):
+for i in range(1,50):
     img=dataReader(i)
     results = exe.run(inference_program,
         feed={feed_target_names[0]: img},
         fetch_list=fetch_targets)
 
     lab = np.argsort(results)[0][0][-1]
-    print(lab)
-    '''
+    #print(lab)
+
     if str(lab)==a[i-1]:
         print(i,"预测结果为:"+str(lab)+" True")
     else:
         print(i,"预测结果为:"+str(lab)+" False")
-        '''

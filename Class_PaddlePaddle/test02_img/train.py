@@ -10,7 +10,9 @@ import visualdl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
+from pylab import mpl
 
+mpl.rcParams['font.sans-serif'] = ['SimHei']  # 用来显示中文
 
 # 指定路径
 path = Class_OS.o1_获得当前工作目录.main()
@@ -20,7 +22,7 @@ print("训练后文件夹路径" + params_dirname)
 place = fluid.CUDAPlace(0)
 # place=fluid.CPUPlace()
 exe = fluid.Executor(place)
-
+'''
 # visualdl
 logw = visualdl.LogWriter("g:/log/main_log", sync_cycle=10)
 # Scalar-损失指标
@@ -34,7 +36,7 @@ with logw.mode("train") as writer:
     input_image = writer.image("input_image", 3, 1)
 
 # visualDL --logdir g:/log/main_log --port 8080 --host 127.0.0.10
-
+'''
 # 加载数据
 datatype = 'float32'
 with open(path + "data/ocrData.txt", 'rt') as f:
@@ -130,8 +132,8 @@ def multilayer_perceptron(img):
     hidden = fluid.layers.fc(input=hidden, size=200, act='relu')
     # 以softmax为激活函数的全连接输出层，输出层的大小必须为数字的个数10
     prediction = fluid.layers.fc(input=hidden, size=10, act='softmax')
-    pltdata=fluid.layers.fc(input=prediction,size=3,act=None)
-    return prediction,pltdata
+    pltdata = fluid.layers.fc(input=prediction, size=3, act=None)
+    return prediction, pltdata
 
 
 def convolutional_neural_network(img):
@@ -166,9 +168,9 @@ def convolutional_neural_network(img):
     return prediction
 
 
-#net = cnn(x)  # CNN模型
-net,pltdata = multilayer_perceptron(x)  # 多层感知机
-#net=convolutional_neural_network(x)#官方的CNN
+# net = cnn(x)  # CNN模型
+net, pltdata = multilayer_perceptron(x)  # 多层感知机
+# net=convolutional_neural_network(x)#官方的CNN
 # 定义损失函数
 cost = fluid.layers.cross_entropy(input=net, label=label)
 avg_cost = fluid.layers.mean(cost)
@@ -177,20 +179,21 @@ acc = fluid.layers.accuracy(input=net, label=label, k=1)
 sgd_optimizer = fluid.optimizer.SGD(learning_rate=0.01)
 sgd_optimizer.minimize(avg_cost)
 # 数据传入设置
-batch_reader = paddle.batch(reader=dataReader(), batch_size=1024)
+batch_reader = paddle.batch(reader=dataReader(), batch_size=2048)
 testb_reader = paddle.batch(reader=testReader(), batch_size=1024)
 feeder = fluid.DataFeeder(place=place, feed_list=[x, label])
 prog = fluid.default_startup_program()
 exe.run(prog)
 
 trainNum = 50
+accL = []
 for i in range(trainNum):
     for batch_id, data in enumerate(batch_reader()):
         outs = exe.run(
             feed=feeder.feed(data),
-            fetch_list=[label, pltdata,avg_cost])  # feed为数据表 输入数据和标签数据
-
-
+            fetch_list=[label, pltdata, avg_cost, acc])  # feed为数据表 输入数据和标签数据
+        accL.append(outs[3])
+        '''
         if i % 3 == 0:
 
             # 绘图-3D
@@ -229,16 +232,19 @@ for i in range(trainNum):
         test_costs.append(test_cost[0])
         testcost = (sum(test_costs) / len(test_costs))
         testTag.add_record(i, testcost)
-        # print("预测损失为：", testcost, "\n")
-
+        # print("预测损失为：", testcost, "\n")'''
 
     pross = float(i) / trainNum
     print("当前训练进度百分比为：" + str(pross * 100)[:3].strip(".") + "%")
 
 # 保存预测模型
 path = params_dirname
+plt.figure(1)
+plt.title('正确率指标')
+plt.xlabel('迭代次数')
+plt.plot(range(50), accL)
+plt.show()
 
-
-fluid.io.save_inference_model(params_dirname, ['x'], [net], exe)
+# fluid.io.save_inference_model(params_dirname, ['x'], [net], exe)
 
 print(params_dirname)

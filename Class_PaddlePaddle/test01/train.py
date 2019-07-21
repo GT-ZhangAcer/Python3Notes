@@ -5,7 +5,7 @@ import Class_OS.o1_获得当前工作目录
 
 #指定路径
 path=Class_OS.o1_获得当前工作目录.main()
-params_dirname = path+"test01.inference.model"
+params_dirname = path+"test01.inference.model/"
 print("训练后文件夹路径"+params_dirname)
 #参数初始化
 gpu = fluid.CUDAPlace(0)
@@ -33,7 +33,7 @@ sgd_optimizer.minimize(avg_cost)
 prog=fluid.default_startup_program()
 exe.run(prog)
 
-for i in range(5000):
+for i in range(50):
     outs = exe.run(
         feed={'x':train_data,'y':y_true},
         fetch_list=[y_predict.name,avg_cost])#feed为数据表 输入数据和标签数据

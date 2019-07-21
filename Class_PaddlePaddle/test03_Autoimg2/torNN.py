@@ -12,7 +12,7 @@ class TorNN:
     M=3 两类:[[[1, 1, 1], [2, 1, 1], [2, 1, 2], [1, 1, 2]], [[4, 5, 5], [5, 4, 4], [4, 4, 4]]]
 
     expansion_rate [建议范围 0.1-2]扩充效率 默认为1 越大分类结果越多 精度越低
-    classify_True_rate [建议范围 0.1-2]分类精确度 默认为1 越高分类越精确 结果越少
+    classify_True_rate [建议范围 0.1-2]分类精确度 默认为2 越高分类越精确 结果越少
     '''
 
     def __init__(self, oridata, predata, expansion_rate=1, classify_True_rate=2):
@@ -22,8 +22,13 @@ class TorNN:
         self.classify_True_rate = classify_True_rate
         # Dim数据计算
         self.oriDim = len(oridata[0])
-        self.preDim = len(predata[0][0])
-        assert self.oriDim == self.preDim, "神经元返回数据尺寸不相同"
+        try:
+            self.preDim = len(predata[0][0])
+            assert self.oriDim == self.preDim, "神经元返回数据尺寸不相同"
+        except:
+            print("Warning 原始数据可能太少")
+
+
 
         # 图片数量计算
         self.oriNum = len(oridata)
@@ -141,7 +146,7 @@ class TorNN:
         sortData1 = []
         for id,itam in enumerate(sortDatalist):
             itam.sort(key=lambda x: x[1])
-            if abs(itam[1][1] - itam[0][1]) > abs(itam[2][1] - itam[1][1]) * self.classify_True_rate:
+            if abs(itam[1][1] - itam[0][1]) > abs(itam[2][1] - itam[1][1]) * classify_True_rate:
                 for i in itam:
                     sortData1.append([i[0],id,i[1]])
 
@@ -164,10 +169,9 @@ class TorNN:
         classifyFalse = list(set(classifyFalse))
         falseNum = self.oriNum - tureNum
         if debug is not None:
-            print("|总需要分类的数据个数为:", self.oriNum)
-            print("|TorNN|成功分类个数：", tureNum, "未分类数：", falseNum)
-            print("|成功：", classifyTrue)
-            print("|未分类：", classifyFalse)
+            print("|len:", self.oriNum,"|success:", tureNum,"|unclassify:",falseNum)
+            print("|success_list:", classifyTrue)
+            print("|unclassifylist:", classifyFalse)
 
         return classifyTrue, classifyFalse
 

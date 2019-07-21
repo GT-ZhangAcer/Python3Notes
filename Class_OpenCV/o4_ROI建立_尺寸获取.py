@@ -19,3 +19,6 @@ cv.imshow("1",imgroi)
 addimg=cv.addWeighted(imgroi,0.3,imgroi2,0.1,0)#第一个参数为底图 第二个参数为底图透明度 第三个和第四个同理为贴图 第五个为Gamma，权重计算后的附加值
 cv.imshow("2",addimg)
 cv.waitKey(0)#等待按键后关闭窗口
+
+#缩放图像
+#cv.resize(img, (int(y / 2), int(x / 2)))
