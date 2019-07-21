@@ -108,6 +108,7 @@ feeder = fluid.DataFeeder(place=place, feed_list=[x, label])
 prog = fluid.default_startup_program()
 exe.run(prog)
 
+
 trainNum = 50
 accL = []
 for i in range(trainNum):
