@@ -74,9 +74,9 @@ net_x, pltdata = net(x)
 net_y = fluid.layers.reshape(x=y, shape=[-1,shape[1], shape[2]])
 
 # 定义损失函数
-# cost = fluid.layers.square_error_cost(input=net_x, label=net_y)
-cost= fluid.layers.smooth_l1(x=net_x,y=net_y)
-avg_cost = fluid.layers.mean(cost)
+cost = fluid.layers.square_error_cost(input=net_x, label=net_y)
+# cost= fluid.layers.smooth_l1(x=net_x,y=net_y)
+avg_cost = fluid.layers.reduce_mean(cost)
 # 定义优化方法
 adam_optimizer = fluid.optimizer.Adam(learning_rate=0.01)
 adam_optimizer.minimize(avg_cost)
@@ -99,36 +99,36 @@ for i in range(trainNum):
             feed=feeder.feed(data),
             fetch_list=[avg_cost, pltdata, label])  # feed为数据表 输入数据和标签数据
 
-        outc = outs[0] / 1500
+        outc = outs[0]
         print(str(i + 1) + "次训练后损失值为：" + str(outc))
 
     if outc <= 5:
         break
-    # # 绘图-3D
-    # fig = plt.figure()
-    # ax = Axes3D(fig)
-    # X_MIT = []
-    # Y_MIT = []
-    # Z_MIT = []
-    # Value_MIT = []
-    # for ii in range(200):
-    #     X_MIT.append(outs[1][ii][0])
-    #     Y_MIT.append(outs[1][ii][1])
-    #     Z_MIT.append(outs[1][ii][2])
-    #     Value_MIT.append(outs[2][ii][0])  # label数据
-    # X_MIT = np.array(X_MIT)
-    # Y_MIT = np.array(Y_MIT)
-    # Z_MIT = np.array(Z_MIT)
-    # Value_MIT = np.array(Value_MIT)
-    # for x, y, z, s in zip(X_MIT, Y_MIT, Z_MIT, Value_MIT):
-    #     c = cm.rainbow(int(255 * int(s) / 9))  # 上色
-    #     ax.text(x, y, z, s, backgroundcolor=c)  # 标位子
-    # ax.set_xlim(X_MIT.min(), X_MIT.max())
-    # ax.set_ylim(Y_MIT.min(), Y_MIT.max())
-    # ax.set_zlim(Z_MIT.min(), Z_MIT.max())
-    # plt.show()
-    # pross = float(i) / trainNum
-    # print("当前训练进度百分比为：" + str(pross * 100)[:3].strip(".") + "%")
+    # 绘图-3D
+    fig = plt.figure()
+    ax = Axes3D(fig)
+    X_MIT = []
+    Y_MIT = []
+    Z_MIT = []
+    Value_MIT = []
+    for ii in range(200):
+        X_MIT.append(outs[1][ii][0])
+        Y_MIT.append(outs[1][ii][1])
+        Z_MIT.append(outs[1][ii][2])
+        Value_MIT.append(outs[2][ii][0])  # label数据
+    X_MIT = np.array(X_MIT)
+    Y_MIT = np.array(Y_MIT)
+    Z_MIT = np.array(Z_MIT)
+    Value_MIT = np.array(Value_MIT)
+    for x, y, z, s in zip(X_MIT, Y_MIT, Z_MIT, Value_MIT):
+        c = cm.rainbow(int(255 * int(s) / 9))  # 上色
+        ax.text(x, y, z, s, backgroundcolor=c)  # 标位子
+    ax.set_xlim(X_MIT.min(), X_MIT.max())
+    ax.set_ylim(Y_MIT.min(), Y_MIT.max())
+    ax.set_zlim(Z_MIT.min(), Z_MIT.max())
+    plt.show()
+    pross = float(i) / trainNum
+    print("当前训练进度百分比为：" + str(pross * 100)[:3].strip(".") + "%")
 
 # 保存预测模型
 
