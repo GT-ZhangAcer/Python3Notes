@@ -12,8 +12,8 @@ params_dirname = path + "test.inference.model"
 print("训练后文件夹路径" + params_dirname)
 # 参数初始化
 place = fluid.CUDAPlace(0)
-# place=fluid.CPUPlace()
-exe = fluid.Executor(place)
+# place = fluid.CPUPlace()
+
 
 # 加载数据
 datatype = 'float32'
@@ -27,32 +27,32 @@ def dataReader():
             im = Image.open(path + "data/" + str(i) + ".jpg").convert('L')
             im = np.array(im).reshape(1, 30, 15).astype(np.float32)
             im = im / 255.0 * 2.0 - 1.0
-            '''
-            img = paddle.dataset.image.load_image(path + "data/" + str(i+1) + ".jpg")'''
+
             labelInfo = a[i - 1]
             yield im, labelInfo
 
     return redaer
 
-
-def testReader():
-    def redaer():
-        for i in range(1501, 1951):
-            im = Image.open(path + "data/" + str(i) + ".jpg").convert('L')
-            im = np.array(im).reshape(1, 30, 15).astype(np.float32)
-            im = im / 255.0 * 2.0 - 1.0
-            '''
-            img = paddle.dataset.image.load_image(path + "data/" + str(i+1) + ".jpg")
-            img=np.transpose(img, (2, 0, 1))'''
-            labelInfo = a[i - 1]
-            yield im, labelInfo
-
-    return redaer
 
 # 定义网络
 x = fluid.layers.data(name="x", shape=[1, 30, 15], dtype=datatype)
 label = fluid.layers.data(name='label', shape=[1], dtype='int64')
 
+# 异步读取
+
+# pyreader = fluid.io.PyReader(feed_list=[x, label], capacity=64)
+# 非可迭代读取
+pyreader = fluid.io.PyReader(feed_list=[x, label], capacity=4, iterable=False)
+
+pyreader.decorate_sample_list_generator(
+    paddle.batch(dataReader(), batch_size=1500),
+    place)
+
+'''
+# 同步数据传入设置
+batch_reader = paddle.batch(reader=dataReader(), batch_size=2048)
+feeder = fluid.DataFeeder(place=place, feed_list=[x, label])
+'''
 
 def cnn(ipt):
     conv1 = fluid.layers.conv2d(input=ipt,
@@ -93,6 +93,7 @@ def cnn(ipt):
 
     return fc2
 
+
 net = cnn(x)  # CNN模型
 
 cost = fluid.layers.cross_entropy(input=net, label=label)
@@ -101,31 +102,49 @@ acc = fluid.layers.accuracy(input=net, label=label, k=1)
 # 定义优化方法
 sgd_optimizer = fluid.optimizer.SGD(learning_rate=0.01)
 sgd_optimizer.minimize(avg_cost)
-# 数据传入设置
-batch_reader = paddle.batch(reader=dataReader(), batch_size=2048)
-testb_reader = paddle.batch(reader=testReader(), batch_size=1024)
-feeder = fluid.DataFeeder(place=place, feed_list=[x, label])
+
+
+exe = fluid.Executor(place)
 prog = fluid.default_startup_program()
 exe.run(prog)
 
-
 trainNum = 50
 accL = []
+
+import time
+
+'''
+# 可迭代读取
+starttime = time.time()
 for i in range(trainNum):
-    for batch_id, data in enumerate(batch_reader()):
+    for batch_id, data in enumerate(pyreader()):
         outs = exe.run(
-            feed=feeder.feed(data),
+            feed=data,
             fetch_list=[label, avg_cost, acc])  # feed为数据表 输入数据和标签数据
-        accL.append(outs[2])
+        accL.append(outs)
+    pross = float(i) / trainNum
+    print("当前训练进度百分比为：" + str(pross * 100)[:3].strip(".") + "%")
+sumtime = time.time() - starttime
+print("Cost Time:", sumtime)
+'''
+
+# 不可迭代读取
+starttime = time.time()
+for i in range(trainNum):
+    pyreader.start()
+    try:
+        while True:
+            outs = exe.run(
+                fetch_list=[label, avg_cost, acc])  # feed为数据表 输入数据和标签数据
+            accL.append(outs[2])
+    except fluid.core.EOFException:
+        print('End of epoch')
+        pyreader.reset()
 
     pross = float(i) / trainNum
     print("当前训练进度百分比为：" + str(pross * 100)[:3].strip(".") + "%")
+sumtime = time.time() - starttime
+print("Cost Time:", sumtime)
 
-path = params_dirname
-plt.figure(1)
-plt.title('正确率指标')
-plt.xlabel('迭代次数')
-plt.plot(range(50), accL)
-plt.show()
 
 fluid.io.save_inference_model(params_dirname, ['x'], [net], exe)

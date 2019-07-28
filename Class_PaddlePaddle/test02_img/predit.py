@@ -21,7 +21,6 @@ with open(path + "data/ocrData.txt", 'rt') as f:
 
 
 
-
 # 参数初始化
 cpu = fluid.CPUPlace()
 exe = fluid.Executor(cpu)

@@ -5,6 +5,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from pylab import mpl
 
+
 mpl.rcParams['font.sans-serif'] = ['SimHei']  # 用来显示中文
 
 path = "./"
