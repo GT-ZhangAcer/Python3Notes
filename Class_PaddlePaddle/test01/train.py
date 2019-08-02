@@ -12,8 +12,8 @@ gpu = fluid.CUDAPlace(0)
 exe = fluid.Executor(gpu)
 
 # 定义数据
-train_data =[[0], [1], [2], [3], [4], [5], [10]]
-y_true =[[3], [13], [23], [33], [43], [53], [103]]
+train_data = [[0], [1], [2], [3], [4], [5], [10]]
+y_true = [[3], [13], [23], [33], [43], [53], [103]]
 
 # 定义网络
 x = fluid.layers.data(name="x", shape=[1], dtype="float32")
@@ -32,10 +32,10 @@ exe.run(prog)
 
 for i in range(50):
     for data_id in range(len(y_true)):
-        data_x=numpy.array(train_data[data_id]).astype("float32").reshape((1,1))
-        data_y = numpy.array(y_true[data_id]).astype("float32").reshape((1,1))
+        data_x = numpy.array(train_data[data_id]).astype("float32").reshape((1, 1))
+        data_y = numpy.array(y_true[data_id]).astype("float32").reshape((1, 1))
         outs = exe.run(
-            feed={'x':data_x , 'y': data_y},
+            feed={'x': data_x, 'y': data_y},
             fetch_list=[y_predict.name, avg_cost])  # feed为数据表 输入数据和标签数据
         print("正在训练第" + str(i + 1) + "次")
         # 观察结果
