@@ -2,7 +2,7 @@ import paddle.fluid as fluid
 import paddle
 import numpy as np
 from PIL import Image
-import numpy
+
 
 # Hyper parameter
 use_cuda = True  # Whether to use GPU or not
@@ -16,7 +16,7 @@ def data_reader(for_test=False):
     def reader():
         pass
 
-    return reader()
+    return reader
 
 
 # Initialization

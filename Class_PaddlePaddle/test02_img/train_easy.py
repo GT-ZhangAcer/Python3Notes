@@ -105,7 +105,7 @@ sgd_optimizer.minimize(avg_cost)
 # 数据传入设置
 batch_reader = paddle.batch(reader=dataReader(), batch_size=2048)
 testb_reader = paddle.batch(reader=testReader(), batch_size=1024)
-feeder = fluid.DataFeeder(place=place, feed_list=[x, label])
+feeder = fluid.DataFeeder(place=place, feed_list=[x,label])
 prog = fluid.default_startup_program()
 exe.run(prog)
 
