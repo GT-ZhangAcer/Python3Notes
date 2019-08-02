@@ -26,7 +26,7 @@ avg_cost = fluid.layers.mean(cost)
 sgd_optimizer = fluid.optimizer.SGD(learning_rate=0.01)
 sgd_optimizer.minimize(avg_cost)
 
-##开始训练，迭代100次
+#开始训练，迭代100次
 prog = fluid.default_startup_program()
 exe.run(prog)
 
