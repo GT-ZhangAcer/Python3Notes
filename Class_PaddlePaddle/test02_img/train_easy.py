@@ -12,8 +12,8 @@ path = "./"
 params_dirname = path + "test.inference.model"
 print("训练后文件夹路径" + params_dirname)
 # 参数初始化
-place = fluid.CUDAPlace(0)
-# place=fluid.CPUPlace()
+# place = fluid.CUDAPlace(0)
+place=fluid.CPUPlace()
 exe = fluid.Executor(place)
 
 # 加载数据
@@ -56,6 +56,7 @@ label = fluid.layers.data(name='label', shape=[1], dtype='int64')
 
 
 def cnn(ipt):
+    print(ipt.shape)
     conv1 = fluid.layers.conv2d(input=ipt,
                                 num_filters=32,
                                 filter_size=3,
