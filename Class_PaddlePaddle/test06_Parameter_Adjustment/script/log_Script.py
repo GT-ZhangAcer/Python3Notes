@@ -37,6 +37,11 @@ class WriteLog:
 
         train_print, _ = log_obj.write_and_req()
         print("Avg acc1 ", train_print["acc1"], "acc5 ", train_print["acc5"], "loss ", train_print["loss"])
+
+        # If you want a minimalist style , Please try the following code !
+
+        print(log_obj.write_and_req()[1]) # Only print test result
+
     """
 
     def __init__(self, path="./"):
@@ -45,7 +50,6 @@ class WriteLog:
         """
         this_time = time.strftime("%Y-%m-%d-%H-%M", time.localtime())
         self.path = os.path.join(path, str(this_time))
-        self.now_step = 0
         self.batch_train_acc1 = [0]
         self.batch_train_acc5 = [0]
         self.batch_train_loss = [0]
@@ -77,7 +81,6 @@ class WriteLog:
         写入并获取该Epoch的训练信息
         :return: 训练集字典、测试集字典(acc1,acc5,loss)
         """
-        self.now_step += 1
         now_train_acc1 = sum(self.batch_train_acc1)
         now_train_acc5 = sum(self.batch_train_acc5)
         now_train_loss = sum(self.batch_train_loss)

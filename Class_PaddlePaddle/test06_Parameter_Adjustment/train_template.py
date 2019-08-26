@@ -59,18 +59,24 @@ train_feeder = fluid.DataFeeder(place=place, feed_list=[x, y])
 log_obj = WriteLog()
 
 for epoch in range(epochs):
-    for step, data in enumerate(batch_reader()):
+    for step, data in enumerate(train_reader()):
         outs = exe.run(program=main_program,
                        feed=train_feeder.feed(data),
-                       fetch_list=[acc_1, acc_5, loss],
+                       fetch_list=[acc1, acc5, loss],
                        return_numpy=False)
         log_obj.add_batch_train_value(outs[1], outs[2], outs[3])
-
-    train_print, _ = log_obj.write_and_req()
+    for step, data in enumerate(test_reader()):
+        outs = exe.run(program=test_program,
+                       feed=train_feeder.feed(data),
+                       fetch_list=[acc1, acc5, loss],
+                       return_numpy=False)
+        log_obj.add_batch_test_value(outs[1], outs[2], outs[3])
+    train_print, test_print = log_obj.write_and_req()
     print("Avg acc1 ", train_print["acc1"], "acc5 ", train_print["acc5"], "loss ", train_print["loss"])
+    print("Avg acc1 ", test_print["acc1"], "acc5 ", test_print["acc5"], "loss ", test_print["loss"])
 
     fluid.io.save_persistables(dirname=save_model_path + "/" + str(epoch) + "persistables", executor=exe,
                                main_program=main_program)
     fluid.io.save_inference_model(dirname=save_model_path + "/" + str(epoch),
-                                  feeded_var_names=["y"], target_vars=[net_out], main_program=main_program,
+                                  feeded_var_names=["input_img"], target_vars=[net], main_program=main_program,
                                   executor=exe)

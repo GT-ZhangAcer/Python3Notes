@@ -78,5 +78,5 @@ for epoch in range(epochs):
         fluid.io.save_persistables(dirname=save_model_path + "/" + str(epoch) + "persistables", executor=exe,
                                    main_program=main_program)
     fluid.io.save_inference_model(dirname=save_model_path + "/" + str(epoch),
-                                  feeded_var_names=["y"], target_vars=[net_out], main_program=main_program,
+                                  feeded_var_names=["x"], target_vars=[net_out], main_program=main_program,
                                   executor=exe)

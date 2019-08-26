@@ -11,5 +11,4 @@ for y in range(5):
     for i in range(20):
         a.add_batch_train_value(5 * i, i, i)
         a.add_batch_test_value(i * 0.8, i, i)
-    train, test = a.write_and_req()
-    print(train, test)
+    print(a.write_and_req())
