@@ -11,8 +11,9 @@ def add_check(uncheck_list, value):
     :param value: 待添加的值
     """
     value = value.tolist()[0]
-    value = round(value, 5)
+
     if type(value) is (float or int):
+        value = int(value * 10000) / 10000
         uncheck_list.append(value)
     else:
         uncheck_list.append(uncheck_list[-1])
@@ -82,12 +83,12 @@ class WriteLog:
         写入并获取该Epoch的训练信息
         :return: 训练集字典、测试集字典(acc1,acc5,loss)
         """
-        now_train_acc1 = sum(self.batch_train_acc1)
-        now_train_acc5 = sum(self.batch_train_acc5)
-        now_train_loss = sum(self.batch_train_loss)
-        now_test_acc1 = sum(self.batch_test_acc1)
-        now_test_acc5 = sum(self.batch_test_acc5)
-        now_test_loss = sum(self.batch_test_loss)
+        now_train_acc1 = sum(self.batch_train_acc1) / len(self.batch_train_acc1)
+        now_train_acc5 = sum(self.batch_train_acc5) / len(self.batch_train_acc5)
+        now_train_loss = sum(self.batch_train_loss) / len(self.batch_train_loss)
+        now_test_acc1 = sum(self.batch_test_acc1) / len(self.batch_test_acc1)
+        now_test_acc5 = sum(self.batch_test_acc5) / len(self.batch_test_acc5)
+        now_test_loss = sum(self.batch_test_loss) / len(self.batch_test_loss)
         self.batch_train_acc1 = [.0]
         self.batch_train_acc5 = [.0]
         self.batch_train_loss = [.0]
