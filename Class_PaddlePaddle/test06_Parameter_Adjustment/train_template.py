@@ -55,25 +55,24 @@ train_feeder = fluid.DataFeeder(place=place, feed_list=[x, y])
 # batch_reader.decorate_sample_list_generator(paddle.batch(data_reader(), batch_size=batch_size),place)
 
 # Train Process
-
+exe.run(startup)
 log_obj = WriteLog()
 
 for epoch in range(epochs):
     for step, data in enumerate(train_reader()):
         outs = exe.run(program=main_program,
                        feed=train_feeder.feed(data),
-                       fetch_list=[acc1, acc5, loss],
-                       return_numpy=False)
-        log_obj.add_batch_train_value(outs[1], outs[2], outs[3])
+                       fetch_list=[acc1, acc5, loss])
+        log_obj.add_batch_train_value(outs[0], outs[1], outs[2])
+
     for step, data in enumerate(test_reader()):
         outs = exe.run(program=test_program,
                        feed=train_feeder.feed(data),
-                       fetch_list=[acc1, acc5, loss],
-                       return_numpy=False)
-        log_obj.add_batch_test_value(outs[1], outs[2], outs[3])
+                       fetch_list=[acc1, acc5, loss])
+        log_obj.add_batch_test_value(outs[0], outs[1], outs[2])
     train_print, test_print = log_obj.write_and_req()
-    print("Avg acc1 ", train_print["acc1"], "acc5 ", train_print["acc5"], "loss ", train_print["loss"])
-    print("Avg acc1 ", test_print["acc1"], "acc5 ", test_print["acc5"], "loss ", test_print["loss"])
+    print(epoch, "Train acc1 ", train_print["acc1"], "acc5 ", train_print["acc5"], "loss ", train_print["loss"])
+    print(epoch, "Test  acc1 ", test_print["acc1"], "acc5 ", test_print["acc5"], "loss ", test_print["loss"])
 
     fluid.io.save_persistables(dirname=save_model_path + "/" + str(epoch) + "persistables", executor=exe,
                                main_program=main_program)

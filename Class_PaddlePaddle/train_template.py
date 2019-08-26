@@ -55,6 +55,7 @@ train_feeder = fluid.DataFeeder(place=place, feed_list=[x, y])
 # batch_reader.decorate_sample_list_generator(paddle.batch(data_reader(), batch_size=batch_size),place)
 
 # Train Process
+exe.run(startup)
 for epoch in range(epochs):
     sum_acc1 = []
     sum_acc5 = []

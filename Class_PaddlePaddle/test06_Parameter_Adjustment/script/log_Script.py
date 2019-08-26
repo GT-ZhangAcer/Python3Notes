@@ -1,20 +1,21 @@
 import time
-from script.os_Script import mkdir
 import os
+import numpy as np
+from script.os_Script import mkdir
 
 
-def _add_check(uncheck_list, value):
+def add_check(uncheck_list, value):
     """
     检查是否有Nan情况，如果有则添加上一组数据至列表中保存
     :param uncheck_list: 未检查的列表
     :param value: 待添加的值
-    :return: 已经检查完毕的列表
     """
-    if str(value).isdigit():
+    value = value.tolist()[0]
+    value = round(value, 5)
+    if type(value) is (float or int):
         uncheck_list.append(value)
     else:
         uncheck_list.append(uncheck_list[-1])
-    return uncheck_list
 
 
 class WriteLog:
@@ -50,12 +51,12 @@ class WriteLog:
         """
         this_time = time.strftime("%Y-%m-%d-%H-%M", time.localtime())
         self.path = os.path.join(path, str(this_time))
-        self.batch_train_acc1 = [0]
-        self.batch_train_acc5 = [0]
-        self.batch_train_loss = [0]
-        self.batch_test_acc1 = [0]
-        self.batch_test_acc5 = [0]
-        self.batch_test_loss = [0]
+        self.batch_train_acc1 = [.0]
+        self.batch_train_acc5 = [.0]
+        self.batch_train_loss = [.0]
+        self.batch_test_acc1 = [.0]
+        self.batch_test_acc5 = [.0]
+        self.batch_test_loss = [.0]
 
         mkdir(path, de=False)
         with open(self.path + ".log", "w") as f:
@@ -63,18 +64,18 @@ class WriteLog:
         print("WriteLog is ready !")
 
     def add_batch_train_value(self, acc1, acc5=None, loss=None):
-        _add_check(self.batch_train_acc1, acc1)
+        add_check(self.batch_train_acc1, acc1)
         if acc5 is not None:
-            _add_check(self.batch_train_acc5, acc5)
+            add_check(self.batch_train_acc5, acc5)
         if loss is not None:
-            _add_check(self.batch_train_loss, loss)
+            add_check(self.batch_train_loss, loss)
 
     def add_batch_test_value(self, acc1, acc5=None, loss=None):
-        _add_check(self.batch_test_acc1, acc1)
+        add_check(self.batch_test_acc1, acc1)
         if acc5 is not None:
-            _add_check(self.batch_test_acc5, acc5)
+            add_check(self.batch_test_acc5, acc5)
         if loss is not None:
-            _add_check(self.batch_test_loss, loss)
+            add_check(self.batch_test_loss, loss)
 
     def write_and_req(self):
         """
@@ -87,6 +88,13 @@ class WriteLog:
         now_test_acc1 = sum(self.batch_test_acc1)
         now_test_acc5 = sum(self.batch_test_acc5)
         now_test_loss = sum(self.batch_test_loss)
+        self.batch_train_acc1 = [.0]
+        self.batch_train_acc5 = [.0]
+        self.batch_train_loss = [.0]
+        self.batch_test_acc1 = [.0]
+        self.batch_test_acc5 = [.0]
+        self.batch_test_loss = [.0]
+
         with open(self.path + ".log", "a") as f:
             f.writelines(str(now_train_acc1) + "-" + str(now_train_acc5) + "-" + str(now_train_loss)
                          + "_" + str(now_test_acc1) + "-" + str(now_test_acc5) + "-" + str(now_test_loss) + "\n")
