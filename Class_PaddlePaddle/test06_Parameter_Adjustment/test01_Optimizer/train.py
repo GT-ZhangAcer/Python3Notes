@@ -2,13 +2,6 @@
 # Datetime:2019/8/25
 # Copyright belongs to the author.
 # Please indicate the source for reprinting.
-
-import paddle.fluid as fluid
-import paddle
-from script.log_Script import WriteLog
-from script.reader_Script import data_normal_id_img
-from net.resnet_vd import ResNet50_vd
-
 import os
 import sys
 
@@ -16,12 +9,19 @@ import sys
 rootPath = os.path.dirname(sys.path[0])
 os.chdir(rootPath)
 
+import paddle.fluid as fluid
+import paddle
+from script.log_Script import WriteLog
+from script.reader_Script import data_normal_id_img
+
+
+
 # Hyper parameter
 use_cuda = False  # Whether to use GPU or not
 batch_size = 512  # Number of incoming batches of data
 epochs = 1000  # Number of training rounds
 save_model_path = "./model"
-learning_rate = 0.001
+learning_rate = 0.0001
 data_num_rate = 1  # Reader data rate
 
 # Initialization
@@ -39,8 +39,10 @@ with fluid.program_guard(main_program=main_program, startup_program=startup):
     input_img = fluid.layers.data(name="input_img", shape=[1, 30, 15])
     label = fluid.layers.data(name="label", shape=[1], dtype="int64")
     # * Access to the Network
-    net = ResNet50_vd().net(input=input_img, class_dim=10)
-    fluid.io.load_params(exe, "./net/ResNet50_vd_v2_pretrained", main_program=main_program)
+    tmp = fluid.layers.fc(input_img, size=200, act="relu", name="fc1")
+    tmp = fluid.layers.fc(tmp, size=200, act="relu", name="fc2")
+    net = fluid.layers.fc(tmp, size=10, act="softmax", name="fc3")
+    fluid.io.load_params(exe, "./net/fc3_persistables", main_program=main_program)
     # * Define loss function
     loss = fluid.layers.cross_entropy(input=net, label=label)
     #  Access to statistical information
@@ -83,8 +85,8 @@ for epoch in range(epochs):
     print(epoch, "Train acc1 ", train_print["acc1"], "acc5 ", train_print["acc5"], "loss ", train_print["loss"])
     print(epoch, "Test  acc1 ", test_print["acc1"], "acc5 ", test_print["acc5"], "loss ", test_print["loss"])
 
-    fluid.io.save_persistables(dirname=save_model_path + "/" + str(epoch) + "persistables", executor=exe,
-                               main_program=main_program)
-    fluid.io.save_inference_model(dirname=save_model_path + "/" + str(epoch),
-                                  feeded_var_names=["input_img"], target_vars=[net], main_program=main_program,
-                                  executor=exe)
+    # fluid.io.save_persistables(dirname=save_model_path + "/" + str(epoch) + "persistables", executor=exe,
+    #                            main_program=main_program)
+    # fluid.io.save_inference_model(dirname=save_model_path + "/" + str(epoch),
+    #                               feeded_var_names=["input_img"], target_vars=[net], main_program=main_program,
+    #                               executor=exe)

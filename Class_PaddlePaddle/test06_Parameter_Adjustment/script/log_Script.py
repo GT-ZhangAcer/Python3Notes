@@ -1,6 +1,5 @@
 import time
 import os
-import numpy as np
 from script.os_Script import mkdir
 
 
@@ -12,10 +11,10 @@ def add_check(uncheck_list, value):
     """
     value = value.tolist()[0]
 
-    if type(value) is (float or int):
+    try:
         value = int(value * 10000) / 10000
         uncheck_list.append(value)
-    else:
+    except ValueError:
         uncheck_list.append(uncheck_list[-1])
 
 
@@ -52,12 +51,12 @@ class WriteLog:
         """
         this_time = time.strftime("%Y-%m-%d-%H-%M", time.localtime())
         self.path = os.path.join(path, str(this_time))
-        self.batch_train_acc1 = [.0]
-        self.batch_train_acc5 = [.0]
-        self.batch_train_loss = [.0]
-        self.batch_test_acc1 = [.0]
-        self.batch_test_acc5 = [.0]
-        self.batch_test_loss = [.0]
+        self.batch_train_acc1 = []
+        self.batch_train_acc5 = []
+        self.batch_train_loss = []
+        self.batch_test_acc1 = []
+        self.batch_test_acc5 = []
+        self.batch_test_loss = []
 
         mkdir(path, de=False)
         with open(self.path + ".log", "w") as f:
@@ -83,22 +82,27 @@ class WriteLog:
         写入并获取该Epoch的训练信息
         :return: 训练集字典、测试集字典(acc1,acc5,loss)
         """
-        now_train_acc1 = sum(self.batch_train_acc1) / len(self.batch_train_acc1)
-        now_train_acc5 = sum(self.batch_train_acc5) / len(self.batch_train_acc5)
-        now_train_loss = sum(self.batch_train_loss) / len(self.batch_train_loss)
-        now_test_acc1 = sum(self.batch_test_acc1) / len(self.batch_test_acc1)
-        now_test_acc5 = sum(self.batch_test_acc5) / len(self.batch_test_acc5)
-        now_test_loss = sum(self.batch_test_loss) / len(self.batch_test_loss)
-        self.batch_train_acc1 = [.0]
-        self.batch_train_acc5 = [.0]
-        self.batch_train_loss = [.0]
-        self.batch_test_acc1 = [.0]
-        self.batch_test_acc5 = [.0]
-        self.batch_test_loss = [.0]
+        now_train_acc1 = round(sum(self.batch_train_acc1) / len(self.batch_train_acc1), 5)
+        now_train_acc5 = round(sum(self.batch_train_acc5) / len(self.batch_train_acc5), 5)
+        now_train_loss = round(sum(self.batch_train_loss) / len(self.batch_train_loss), 5)
+
+        now_test_acc1 = round(sum(self.batch_test_acc1) / len(self.batch_test_acc1), 5)
+        now_test_acc5 = round(sum(self.batch_test_acc5) / len(self.batch_test_acc5), 5)
+        now_test_loss = round(sum(self.batch_test_loss) / len(self.batch_test_loss), 5)
+        self.batch_train_acc1 = []
+        self.batch_train_acc5 = []
+        self.batch_train_loss = []
+        self.batch_test_acc1 = []
+        self.batch_test_acc5 = []
+        self.batch_test_loss = []
 
         with open(self.path + ".log", "a") as f:
             f.writelines(str(now_train_acc1) + "-" + str(now_train_acc5) + "-" + str(now_train_loss)
                          + "_" + str(now_test_acc1) + "-" + str(now_test_acc5) + "-" + str(now_test_loss) + "\n")
+        if now_train_loss == 0:
+            now_train_loss = "Nan"
+        if now_test_loss == 0:
+            now_test_loss = "Nan"
         train_dict = {"acc1": now_train_acc1, "acc5": now_train_acc5, "loss": now_train_loss}
         test_dict = {"acc1": now_test_acc1, "acc5": now_test_acc5, "loss": now_test_loss}
         return train_dict, test_dict
