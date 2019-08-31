@@ -3,6 +3,7 @@ import paddle.fluid as fluid
 import numpy
 import Class_OS.o1_获得当前工作目录
 
+fluid.install_check.run_check()
 # 指定路径
 path = Class_OS.o1_获得当前工作目录.main()
 params_dirname = path + "test01.inference.model/"
@@ -26,7 +27,7 @@ avg_cost = fluid.layers.mean(cost)
 sgd_optimizer = fluid.optimizer.SGD(learning_rate=0.01)
 sgd_optimizer.minimize(avg_cost)
 
-#开始训练，迭代100次
+# 开始训练，迭代100次
 prog = fluid.default_startup_program()
 exe.run(prog)
 

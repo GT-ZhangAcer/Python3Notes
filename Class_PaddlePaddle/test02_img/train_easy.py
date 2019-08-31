@@ -131,3 +131,4 @@ plt.plot(range(50), accL)
 plt.show()
 
 fluid.io.save_inference_model(params_dirname, ['x'], [net], exe)
+

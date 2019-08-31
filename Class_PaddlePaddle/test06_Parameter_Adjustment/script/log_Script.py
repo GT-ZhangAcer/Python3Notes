@@ -50,6 +50,7 @@ class WriteLog:
         :param path: 日志文件保存路径
         """
         this_time = time.strftime("%Y-%m-%d-%H-%M", time.localtime())
+        self.back_time = time.time()
         self.path = os.path.join(path, str(this_time))
         self.batch_train_acc1 = []
         self.batch_train_acc5 = []
@@ -82,6 +83,7 @@ class WriteLog:
         写入并获取该Epoch的训练信息
         :return: 训练集字典、测试集字典(acc1,acc5,loss)
         """
+        now_time = time.time()
         now_train_acc1 = round(sum(self.batch_train_acc1) / len(self.batch_train_acc1), 5)
         now_train_acc5 = round(sum(self.batch_train_acc5) / len(self.batch_train_acc5), 5)
         now_train_loss = round(sum(self.batch_train_loss) / len(self.batch_train_loss), 5)
@@ -98,11 +100,14 @@ class WriteLog:
 
         with open(self.path + ".log", "a") as f:
             f.writelines(str(now_train_acc1) + "-" + str(now_train_acc5) + "-" + str(now_train_loss)
-                         + "_" + str(now_test_acc1) + "-" + str(now_test_acc5) + "-" + str(now_test_loss) + "\n")
-        if now_train_loss == 0:
-            now_train_loss = "Nan"
-        if now_test_loss == 0:
-            now_test_loss = "Nan"
-        train_dict = {"acc1": now_train_acc1, "acc5": now_train_acc5, "loss": now_train_loss}
-        test_dict = {"acc1": now_test_acc1, "acc5": now_test_acc5, "loss": now_test_loss}
-        return train_dict, test_dict
+                         + "_" + str(now_test_acc1) + "-" + str(now_test_acc5) + "-" + str(
+                now_test_loss) + "_" + str(now_time - self.back_time) +
+                         "\n")
+            self.back_time = now_time
+            if now_train_loss == 0:
+                now_train_loss = "Nan"
+            if now_test_loss == 0:
+                now_test_loss = "Nan"
+            train_dict = {"acc1": now_train_acc1, "acc5": now_train_acc5, "loss": now_train_loss}
+            test_dict = {"acc1": now_test_acc1, "acc5": now_test_acc5, "loss": now_test_loss}
+            return train_dict, test_dict

@@ -14,7 +14,7 @@ test_data = numpy.array([[input("请输入数值")]]).astype(datatype)  # 测试
 # 参数初始化
 cpu = fluid.CPUPlace()
 exe = fluid.Executor(cpu)
-prog = fluid.default_startup_program()
+
 
 # 加载模型
 [inference_program, feed_target_names, fetch_targets] = fluid.io.load_inference_model(params_dirname, exe)

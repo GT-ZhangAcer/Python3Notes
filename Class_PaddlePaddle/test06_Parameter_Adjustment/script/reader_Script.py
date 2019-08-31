@@ -1,7 +1,7 @@
-import paddle.fluid as fluid
 import paddle
 from PIL import Image
 import numpy as np
+import pickle
 
 
 def data_normal_id_img(batch_size, data_num_rate=1):
@@ -32,5 +32,43 @@ def data_normal_id_img(batch_size, data_num_rate=1):
         return reader
 
     train_batch = paddle.batch(reader=paddle.reader.shuffle(data_reader(), 1500), batch_size=batch_size)
-    test_batch = paddle.batch(reader=paddle.reader.shuffle(data_reader(for_test=True), 500), batch_size=batch_size)
+    test_batch = paddle.batch(reader=data_reader(for_test=True), batch_size=batch_size)
+    return train_batch, test_batch
+
+
+def data_cifar10(batch_size, modifier_def=None):
+    def unpick(file_name):
+        with open(file_name, 'rb') as fo:
+            data = pickle.load(fo, encoding='bytes')
+        return data
+
+    train_file_name = './data/cifar-10-batches-py/data_batch_'
+    test_file_name = './data/cifar-10-batches-py/test_batch'
+
+    def reader(for_test=False):
+        def train_reader():
+            for i in range(1, 6):
+                file_name = train_file_name + str(i)
+                data = unpick(file_name)
+                for img, label in zip(data[b'data'], data[b'labels']):
+                    img = np.array(img).reshape(3, 32, 32).astype('float32')
+                    if modifier_def is not None:
+                        img = modifier_def(img)
+                    yield img, int(label)
+
+        def test_reader():
+            data = unpick(test_file_name)
+            for img, label in zip(data[b'data'], data[b'labels']):
+                img = np.array(img).reshape(3, 32, 32).astype('float32')
+                if modifier_def is not None:
+                    img = modifier_def(img)
+                yield img, int(label)
+
+        if for_test is False:
+            return train_reader
+        else:
+            return test_reader
+
+    train_batch = paddle.batch(reader=paddle.reader.shuffle(reader(), 1000), batch_size=batch_size)
+    test_batch = paddle.batch(reader=reader(for_test=True), batch_size=batch_size)
     return train_batch, test_batch

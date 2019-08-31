@@ -1,7 +1,9 @@
-# Author: Acer Zhang
+# Author:  Acer Zhang
 # Datetime:2019/8/25
 # Copyright belongs to the author.
 # Please indicate the source for reprinting.
+
+# Tips : If you want use this py in AI Studio GPU, Please edit rootPath to /home/aistudio/work and make big batch_size
 import os
 import sys
 
@@ -10,19 +12,23 @@ rootPath = os.path.dirname(sys.path[0])
 os.chdir(rootPath)
 
 import paddle.fluid as fluid
-import paddle
 from script.log_Script import WriteLog
-from script.reader_Script import data_normal_id_img
-
-
+from script.reader_Script import data_cifar10
+from test01_Optimizer.mini_restnet import resnet_cifar10
 
 # Hyper parameter
-use_cuda = False  # Whether to use GPU or not
-batch_size = 512  # Number of incoming batches of data
+use_cuda = True  # Whether to use GPU or not
+batch_size = 64  # Number of incoming batches of data
 epochs = 1000  # Number of training rounds
 save_model_path = "./model"
-learning_rate = 0.0001
-data_num_rate = 1  # Reader data rate
+learning_rate = 0.001
+
+
+# normalization
+def img_normalization(img):
+    img = img / 255
+    return img
+
 
 # Initialization
 place = fluid.CUDAPlace(0) if use_cuda else fluid.CPUPlace()
@@ -36,13 +42,11 @@ startup = fluid.Program()
 with fluid.program_guard(main_program=main_program, startup_program=startup):
     """Tips:Symbol * stands for Must"""
     # * Define data types
-    input_img = fluid.layers.data(name="input_img", shape=[1, 30, 15])
+    input_img = fluid.layers.data(name="input_img", shape=[3, 32, 32])
     label = fluid.layers.data(name="label", shape=[1], dtype="int64")
     # * Access to the Network
-    tmp = fluid.layers.fc(input_img, size=200, act="relu", name="fc1")
-    tmp = fluid.layers.fc(tmp, size=200, act="relu", name="fc2")
-    net = fluid.layers.fc(tmp, size=10, act="softmax", name="fc3")
-    fluid.io.load_params(exe, "./net/fc3_persistables", main_program=main_program)
+    net = resnet_cifar10(input_img)
+    # fluid.io.load_params(exe, "./test01_Optimizer/params", main_program=main_program)
     # * Define loss function
     loss = fluid.layers.cross_entropy(input=net, label=label)
     #  Access to statistical information
@@ -58,7 +62,7 @@ with fluid.program_guard(main_program=main_program, startup_program=startup):
 
 # Feed configure
 # if you want to shuffle "reader=paddle.reader.shuffle(dataReader(), buf_size)"
-train_reader, test_reader = data_normal_id_img(batch_size=batch_size)
+train_reader, test_reader = data_cifar10(batch_size=batch_size, modifier_def=img_normalization)
 train_feeder = fluid.DataFeeder(place=place, feed_list=[input_img, label])
 
 # if you want to asynchronous reading
@@ -84,9 +88,5 @@ for epoch in range(epochs):
     train_print, test_print = log_obj.write_and_req()
     print(epoch, "Train acc1 ", train_print["acc1"], "acc5 ", train_print["acc5"], "loss ", train_print["loss"])
     print(epoch, "Test  acc1 ", test_print["acc1"], "acc5 ", test_print["acc5"], "loss ", test_print["loss"])
-
-    # fluid.io.save_persistables(dirname=save_model_path + "/" + str(epoch) + "persistables", executor=exe,
-    #                            main_program=main_program)
-    # fluid.io.save_inference_model(dirname=save_model_path + "/" + str(epoch),
-    #                               feeded_var_names=["input_img"], target_vars=[net], main_program=main_program,
-    #                               executor=exe)
+    # fluid.io.save_params(executor=exe, dirname="./test01_Optimizer/params", main_program=main_program)
+    # break
