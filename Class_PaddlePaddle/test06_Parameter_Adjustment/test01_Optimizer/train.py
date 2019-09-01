@@ -54,7 +54,7 @@ with fluid.program_guard(main_program=main_program, startup_program=startup):
     acc1 = fluid.layers.accuracy(input=net, label=label, k=1)
     acc5 = fluid.layers.accuracy(input=net, label=label, k=5)
     # Clone program
-    test_program = main_program.clone()
+    test_program = main_program.clone(for_test=True)
     # * Define the optimizer
 
     fluid.optimizer.SGD(learning_rate=learning_rate).minimize(loss)
@@ -89,4 +89,7 @@ for epoch in range(epochs):
     print(epoch, "Train acc1 ", train_print["acc1"], "acc5 ", train_print["acc5"], "loss ", train_print["loss"])
     print(epoch, "Test  acc1 ", test_print["acc1"], "acc5 ", test_print["acc5"], "loss ", test_print["loss"])
     # fluid.io.save_params(executor=exe, dirname="./test01_Optimizer/params", main_program=main_program)
+
+    # fluid.io.save_inference_model("./test01_Optimizer/model", ['input_img'], [net], executor=exe,
+    #                              main_program=main_program)
     # break

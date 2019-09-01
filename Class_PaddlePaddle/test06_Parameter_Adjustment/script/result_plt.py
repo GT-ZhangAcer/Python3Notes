@@ -9,8 +9,9 @@ from pylab import mpl
 mpl.rcParams['font.sans-serif'] = ['SimHei']  # 用来显示中文
 
 
-def make_classify_info(file_path):
+def make_classify_info(file_path, limit=None):
     """
+    :param limit: Max x
     :param file_path:log file path
 
     Data Example:
@@ -36,6 +37,8 @@ def make_classify_info(file_path):
         for line_id, info in enumerate(data):
             if line_id == 0:
                 continue
+            if line_id == limit:
+                break
             info = info.split("_")
             train_acc1.append([float(info[0].split("-")[0])])
             train_acc5.append([float(info[0].split("-")[1])])
@@ -67,7 +70,8 @@ def make_2label(epoch_list, a_list, b_list, title, y_label='accuracy rate', a_la
     plt.title(title)
     plt.xlabel('Epoch')
     plt.ylabel(y_label)
-    plt.ylim(0, 1)
+    if y_label == 'accuracy rate':
+        plt.ylim(0, 1)
     plt.plot(epoch_list, a_list, 'r', label=a_label)
     plt.plot(epoch_list, b_list, 'b', label=b_label)
     plt.legend(bbox_to_anchor=[1, 1])
@@ -75,9 +79,11 @@ def make_2label(epoch_list, a_list, b_list, title, y_label='accuracy rate', a_la
 
 
 dataC1 = make_classify_info(
-    r'F:\Python3Notes\Class_PaddlePaddle\test06_Parameter_Adjustment\test01_Optimizer\2019-08-31-22-23C1.log')
+    r'F:\Python3Notes\Class_PaddlePaddle\test06_Parameter_Adjustment\test01_Optimizer\2019-08-31-22-23C1.log',
+    limit=30)
 dataC2 = make_classify_info(
-    r'F:\Python3Notes\Class_PaddlePaddle\test06_Parameter_Adjustment\test01_Optimizer\2019-08-31-22-22C2.log')
+    r'F:\Python3Notes\Class_PaddlePaddle\test06_Parameter_Adjustment\test01_Optimizer\2019-08-31-22-22C2.log',
+    limit=30)
 
 # epoch_list, train_acc1, train_acc5, train_loss, test_acc1, test_acc5, time_list
 # Top1
@@ -85,14 +91,16 @@ make_2label(epoch_list=dataC1[0], a_list=dataC1[1], b_list=dataC2[1], title="Cif
             b_label="Adam")
 plt.show()
 
-make_2label(epoch_list=dataC1[0], a_list=dataC1[4], b_list=dataC2[4], title="Cifar-10 Top1 Validation 准确率", a_label="SGD",
+make_2label(epoch_list=dataC1[0], a_list=dataC1[4], b_list=dataC2[4], title="Cifar-10 Top1 Validation 准确率",
+            a_label="SGD",
             b_label="Adam")
 plt.show()
 # Top5
-make_2label(epoch_list=dataC1[0], a_list=dataC1[5], b_list=dataC2[5], title="Cifar-10 Top5 Validation 准确率", a_label="SGD",
+make_2label(epoch_list=dataC1[0], a_list=dataC1[5], b_list=dataC2[5], title="Cifar-10 Top5 Validation 准确率",
+            a_label="SGD",
             b_label="Adam")
 plt.show()
 # Loss
 make_2label(epoch_list=dataC1[0], a_list=dataC1[3], b_list=dataC2[3], title="Cifar-10 loss", a_label="SGD",
-            b_label="Adam")
+            b_label="Adam", y_label="loss")
 plt.show()
