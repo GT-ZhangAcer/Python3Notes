@@ -3,7 +3,6 @@ import paddle.fluid as fluid
 import numpy
 import Class_OS.o1_获得当前工作目录
 
-fluid.install_check.run_check()
 # 指定路径
 path = Class_OS.o1_获得当前工作目录.main()
 params_dirname = path + "test01.inference.model/"
