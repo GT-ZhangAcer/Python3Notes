@@ -12,6 +12,7 @@ epochs = 10  # Number of training rounds
 save_model_path = "./model"
 data_path = "./data"
 block_num = 10  # Block_num
+learning_rate = 0.0001
 
 
 # Reader
@@ -50,25 +51,25 @@ with fluid.program_guard(main_program=main_program, startup_program=startup):
     """Tips:Symbol * stands for Must"""
     # * Define data types
     img = fluid.layers.data(name="img", shape=[3, 512, 512], dtype="float32")
-    box = fluid.layers.data(name="box", shape=[4], dtype="float32")
-    label = fluid.layers.data(name="label", shape=[1], dtype="int64")
+    box = fluid.layers.data(name="box", shape=[block_num, 4], dtype="float32")
+    label = fluid.layers.data(name="label", shape=[block_num, 1], dtype="int64")
     # * Access to the Network
-    net = BGSODNet(10).net(img, box, label)
-    # * Define loss function
+    result_list, loss = BGSODNet(10).net(img, box, label)
 
     #  Access to statistical information
 
     # Clone program
-
+    evl_program = main_program.clone(for_test=True)
     # * Define the optimizer
-
+    opt = fluid.optimizer.Adam(learning_rate=learning_rate)
+    opt.minimize(loss)
     pass
 
 # Feed configure
 # if you want to shuffle "reader=paddle.reader.shuffle(dataReader(), buf_size)"
-batch_reader = paddle.batch(reader=data_reader(), batch_size=batch_size)
-test_batch_reader = paddle.batch(reader=data_reader(for_test=True), batch_size=batch_size)
-train_feeder = fluid.DataFeeder(place=place, feed_list=[x, y])
+train_reader = paddle.batch(reader=data_reader(), batch_size=batch_size)
+test_reader = paddle.batch(reader=data_reader(for_test=True), batch_size=batch_size)
+train_feeder = fluid.DataFeeder(place=place, feed_list=[img, box, label])
 
 # if you want to asynchronous reading
 # batch_reader = fluid.io.PyReader(feed_list=[x, y], capacity=64)
@@ -76,7 +77,7 @@ train_feeder = fluid.DataFeeder(place=place, feed_list=[x, y])
 
 # Train Process
 exe.run(startup)
-log_obj = WriteLog()
+# log_obj = WriteLog()
 
 for epoch in range(epochs):
     for step, data in enumerate(train_reader()):
@@ -86,13 +87,13 @@ for epoch in range(epochs):
         log_obj.add_batch_train_value(outs[0], outs[1], outs[2])
 
     for step, data in enumerate(test_reader()):
-        outs = exe.run(program=test_program,
+        outs = exe.run(program=evl_program,
                        feed=train_feeder.feed(data),
                        fetch_list=[acc1, acc5, loss])
         log_obj.add_batch_test_value(outs[0], outs[1], outs[2])
-    train_print, test_print = log_obj.write_and_req()
-    print(epoch, "Train acc1 ", train_print["acc1"], "acc5 ", train_print["acc5"], "loss ", train_print["loss"])
-    print(epoch, "Test  acc1 ", test_print["acc1"], "acc5 ", test_print["acc5"], "loss ", test_print["loss"])
+    # train_print, test_print = log_obj.write_and_req()
+    # print(epoch, "Train acc1 ", train_print["acc1"], "acc5 ", train_print["acc5"], "loss ", train_print["loss"])
+    # print(epoch, "Test  acc1 ", test_print["acc1"], "acc5 ", test_print["acc5"], "loss ", test_print["loss"])
 
     fluid.io.save_persistables(dirname=save_model_path + "/" + str(epoch) + "persistables", executor=exe,
                                main_program=main_program)

@@ -91,13 +91,15 @@ class BGSODNet:
     def net(self, img_ipt, box_ipt_list, label_list):
         conv_block_list = make_block(img_ipt)
         result_list = []
+        sum_loss = fluid.layers.zeros([1], dtype="float32")
         for i, block in enumerate(conv_block_list):
             pc, box, forecast = self.__base_net(block)
             box_ipt = fluid.layers.slice(box_ipt_list, [0], [i], [i + 1])
             label = fluid.layers.slice(label_list, [0], [i], [i + 1])
             loss = cal_loss(pc, box, forecast, box_ipt, label)
-            result_list.append([pc, box, forecast, loss])
-        return result_list
+            sum_loss = fluid.layers.elementwise_add(sum_loss, loss)
+            result_list.append([pc, box, forecast])
+        return result_list, sum_loss
 
     def __base_net(self, ipt):
         """
@@ -118,5 +120,3 @@ class BGSODNet:
         forecast = fluid.layers.slice(tmp, axes=[1], starts=[5], ends=[self.fc_size])
         forecast = fluid.layers.softmax(forecast)
         return pc, box, forecast
-
-
