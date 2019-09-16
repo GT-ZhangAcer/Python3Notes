@@ -40,19 +40,19 @@ label = fluid.layers.data(name='label', shape=[1], dtype='int64')
 
 # 异步读取
 
-# pyreader = fluid.io.PyReader(feed_list=[x, label], capacity=64)
+# py_reader = fluid.io.PyReader(feed_list=[x, label], capacity=64)
 # 非可迭代读取
-pyreader = fluid.io.PyReader(feed_list=[x, label], capacity=4, iterable=False)
+py_reader = fluid.io.PyReader(feed_list=[x, label], capacity=4, iterable=False)
 
-pyreader.decorate_sample_list_generator(
+py_reader.decorate_sample_list_generator(
     paddle.batch(dataReader(), batch_size=1500),
     place)
 
-'''
+"""
 # 同步数据传入设置
 batch_reader = paddle.batch(reader=dataReader(), batch_size=2048)
 feeder = fluid.DataFeeder(place=place, feed_list=[x, label])
-'''
+"""
 
 def cnn(ipt):
     conv1 = fluid.layers.conv2d(input=ipt,
@@ -131,7 +131,7 @@ print("Cost Time:", sumtime)
 # 不可迭代读取
 starttime = time.time()
 for i in range(trainNum):
-    pyreader.start()
+    py_reader.start()
     try:
         while True:
             outs = exe.run(
@@ -139,7 +139,7 @@ for i in range(trainNum):
             accL.append(outs[2])
     except fluid.core.EOFException:
         print('End of epoch')
-        pyreader.reset()
+        py_reader.reset()
 
     pross = float(i) / trainNum
     print("当前训练进度百分比为：" + str(pross * 100)[:3].strip(".") + "%")
