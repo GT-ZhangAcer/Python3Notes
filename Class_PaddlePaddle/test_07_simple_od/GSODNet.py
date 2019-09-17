@@ -15,7 +15,7 @@ def build_backbone_net(ipt):
     :return: 网络输出
     """
 
-    def conv_p_bn(ipt_layer, name_id, filter_size=3, num_filters=64, padding=0):
+    def conv_p_bn(ipt_layer, name_id, filter_size=3, num_filters=32, padding=1):
         tmp = fluid.layers.conv2d(input=ipt_layer,
                                   num_filters=num_filters,
                                   filter_size=filter_size,
@@ -36,12 +36,12 @@ def build_backbone_net(ipt):
     layer_3 = conv_p_bn(layer_2, 3, filter_size=3, padding=1, num_filters=64)
     layer_4 = conv_p_bn(layer_3, 4, filter_size=3, padding=1, num_filters=128)
     layer_5 = conv_p_bn(layer_4, 5, filter_size=3, padding=1, num_filters=128)
-    print(layer_1.shape)
-    print(layer_2.shape)
-    print(layer_3.shape)
-    print(layer_4.shape)
-    print(layer_5.shape)
-    print("Base Net END")
+    # print(layer_1.shape)
+    # print(layer_2.shape)
+    # print(layer_3.shape)
+    # print(layer_4.shape)
+    # print(layer_5.shape)
+    # print("Base Net END")
     return layer_5
 
 
@@ -53,12 +53,16 @@ def make_block(ipt):
     """
     backbone_net = build_backbone_net(ipt)
     conv_block_list = []
-    for block_id in range(backbone_net.shape[-1]):
-        block = fluid.layers.slice(backbone_net,
-                                   axes=[2, 3],
-                                   starts=[block_id, block_id],
-                                   ends=[block_id + 1, block_id + 1])
-        conv_block_list.append(block)
+
+    for x_id in range(backbone_net.shape[-1]):
+        for y_id in range(backbone_net.shape[-2]):
+            block = fluid.layers.slice(backbone_net,
+                                       axes=[2, 3],
+                                       starts=[y_id, x_id],
+                                       ends=[y_id + 1, x_id + 1])
+            conv_block_list.append(block)
+    # print(backbone_net.shape)
+    # print(conv_block_list[0].shape)
     return conv_block_list
 
 
@@ -68,17 +72,19 @@ class BGSODNet:
 
     def net(self, img_ipt, box_ipt_list, label_list):
         conv_block_list = make_block(img_ipt)
-        sum_loss = fluid.layers.zeros([-1, 1], dtype="float32")
         tmp_copy = None
+        sum_loss = None
         for i, block in enumerate(conv_block_list):
             out_info = self.__base_net(block)
             if i == 0:
                 tmp_copy = out_info
+
             # 获取监督学习标签
-            box_ipt = fluid.layers.slice(box_ipt_list, [0], [i], [i + 1])
-            label = fluid.layers.slice(label_list, [0], [i], [i + 1])
+            box_ipt = fluid.layers.slice(box_ipt_list, [1], [i], [i + 1])
+            label = fluid.layers.slice(label_list, [1], [i], [i + 1])
+            label = fluid.layers.reshape(label, shape=[-1, 1])
             loss = self.__cal_loss(out_info, box_ipt, label)
-            sum_loss = fluid.layers.elementwise_add(sum_loss, loss)
+            sum_loss = 2*loss
             tmp_copy = fluid.layers.concat([tmp_copy, out_info])
             # print(sum_loss.shape)
             # print(loss.shape)
@@ -122,18 +128,17 @@ class BGSODNet:
         box = fluid.layers.slice(fc_out, axes=[1], starts=[1], ends=[5])
         forecast = fluid.layers.slice(fc_out, axes=[1], starts=[5], ends=[self.fc_size])
         forecast = fluid.layers.softmax(forecast)
-        pc_loss = fluid.layers.square_error_cost(pc, fluid.layers.ones(shape=[1], dtype='int64'))
+        pc_loss = fluid.layers.square_error_cost(pc, fluid.layers.ones(shape=[1], dtype='float32'))
         box_loss = fluid.layers.square_error_cost(box_ipt, box)
         avg_box_loss = fluid.layers.mean(box_loss)
-        label_loss = fluid.layers.cross_entropy(forecast, label)
-        avg_label_loss = fluid.layers.mean(label_loss)
+        # label_loss = fluid.layers.cross_entropy(forecast, label)
+        # avg_label_loss = fluid.layers.mean(label_loss)
         loss = fluid.layers.elementwise_mul(pc_loss, avg_box_loss)
-        loss = fluid.layers.elementwise_add(loss, avg_label_loss)
-        return loss
-
+        # loss = fluid.layers.elementwise_add(loss, avg_label_loss)
+        return fluid.layers.reduce_mean(pc_loss)
 
 # Test
-a = fluid.layers.data(name="a", shape=[3, 512, 512], dtype="float32")
-box = fluid.layers.data(name="box", shape=[-1, 4], dtype="float32")
-label = fluid.layers.data(name="label", shape=[-1, 1], dtype="int64")
-result_list, loss = BGSODNet(10).net(a, box, label)
+# a = fluid.layers.data(name="a", shape=[3, 512, 512], dtype="float32")
+# box = fluid.layers.data(name="box", shape=[-1, 4], dtype="float32")
+# label = fluid.layers.data(name="label", shape=[-1, 1], dtype="int64")
+# result_list, loss = BGSODNet(10).net(a, box, label)

@@ -5,38 +5,33 @@ from PIL import Image
 from GSODNet import BGSODNet
 
 # Hyper parameter
-use_cuda = True  # Whether to use GPU or not
+use_cuda = False  # Whether to use GPU or not
 batch_size = 10  # Number of incoming batches of data
 epochs = 10  # Number of training rounds
 save_model_path = "./model"
 data_path = "./data"
-block_num = 28  # Block_num
+block_num = 16  # 分块个数
+view_pix = 32  # 感受野
 learning_rate = 0.0001
 
 
-def data_read(info_path):
+def info_read(info_path):
     """
     读取info文件下数据
     :param info_path: info文件路径
     :return: np Array :box, label, label
     """
+    # 创建一个 H x W x len(box + label) 形状的数组来存储数据
+    info_array = np.zeros([block_num, block_num, 5])
     with open(info_path, "r") as f:
         infos = f.read().replace(" ", "").split("\n")
-        final_box = None
-        final_label = None
-        for i, info in enumerate(infos):
+        for info in infos:
             info = info.split(",")
-            mini_data_box = info[:3]
-            mini_data_box = np.array(mini_data_box).reshape(1, 4).astype(np.float32)
-            mini_data_label = info[3]
-            mini_data_label = np.array(mini_data_label).reshape(1, 1).astype(np.int64)
-            if i == 0:
-                final_box = mini_data_box
-                final_label = mini_data_label
-                continue
-            final_box = np.concatenate((final_box, mini_data_box))
-            final_label = np.concatenate((final_label, mini_data_label))
-            return final_box, final_label
+            mini_data = [float(i) for i in info]
+            h = mini_data[0] // view_pix
+            w = mini_data[1] // view_pix
+            info_array[int(h)][int(w)] = mini_data
+            return info_array
 
 
 # Reader
@@ -50,10 +45,14 @@ def data_reader(for_test=False):
     def reader():
         for i in range(start_num, end_num):
             im = Image.open(data_path + '/img/' + str(i) + ".jpg")
-            im = np.array(im).reshape(3, 512, 512).astype(np.float32)
+            im = np.array(im).reshape(1, 3, 512, 512).astype(np.float32)
             info_path = data_path + '/info/' + str(i) + ".info"
-
-            return im, data_box, data_label
+            info_array = info_read(info_path)
+            box_array = info_array[:, :, :4]
+            box_array = box_array.reshape(1, 16, 16, 4)
+            label_array = info_array[:, :, 4:5]
+            label_array = label_array.reshape(1, 16, 16, 1)
+            yield im, box_array, label_array
 
     return reader
 
@@ -64,15 +63,18 @@ exe = fluid.Executor(place)
 
 # Program
 main_program = fluid.Program()
+# 如果不定义上方的那行代码则默认执行fluid.default_main_program()为主程序，同时也不需要使用with关键字编辑项目了
 startup = fluid.Program()
+# 这里使用 startup =fluid.default_startup_program()作为缺省的启动程序也是可以的
+
 
 # Edit Program
 with fluid.program_guard(main_program=main_program, startup_program=startup):
     """Tips:Symbol * stands for Must"""
     # * Define data types
     img = fluid.layers.data(name="img", shape=[3, 512, 512], dtype="float32")
-    box = fluid.layers.data(name="box", shape=[block_num, 4], dtype="float32")
-    label = fluid.layers.data(name="label", shape=[block_num, 1], dtype="int64")
+    box = fluid.layers.data(name="box", shape=[block_num ** 2, 4], dtype="float32")
+    label = fluid.layers.data(name="label", shape=[block_num ** 2, 1], dtype="int64")
     # * Access to the Network
     result_list, loss = BGSODNet(10).net(img, box, label)
 
@@ -97,7 +99,7 @@ train_feeder = fluid.DataFeeder(place=place, feed_list=[img, box, label])
 # Train Process
 exe.run(startup)
 # log_obj = WriteLog()
-
+print("Start!")
 for epoch in range(epochs):
     for step, data in enumerate(train_reader()):
         outs = exe.run(program=main_program,
