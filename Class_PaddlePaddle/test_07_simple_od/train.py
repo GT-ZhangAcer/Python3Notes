@@ -106,6 +106,7 @@ for epoch in range(epochs):
                        feed=train_feeder.feed(data),
                        fetch_list=[result_list, loss])
         # log_obj.add_batch_train_value(outs[0], outs[1], outs[2])
+        print(outs)
 
     for step, data in enumerate(test_reader()):
         outs = exe.run(program=evl_program,
