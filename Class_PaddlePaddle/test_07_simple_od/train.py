@@ -49,9 +49,9 @@ def data_reader(for_test=False):
             info_path = data_path + '/info/' + str(i) + ".info"
             info_array = info_read(info_path)
             box_array = info_array[:, :, :4]
-            box_array = box_array.reshape(1, 16, 16, 4)
+            box_array = box_array.reshape(1, block_num ** 2, 4)
             label_array = info_array[:, :, 4:5]
-            label_array = label_array.reshape(1, 16, 16, 1)
+            label_array = label_array.reshape(1, block_num ** 2)
             yield im, box_array, label_array
 
     return reader
@@ -74,7 +74,7 @@ with fluid.program_guard(main_program=main_program, startup_program=startup):
     # * Define data types
     img = fluid.layers.data(name="img", shape=[3, 512, 512], dtype="float32")
     box = fluid.layers.data(name="box", shape=[block_num ** 2, 4], dtype="float32")
-    label = fluid.layers.data(name="label", shape=[block_num ** 2, 1], dtype="int64")
+    label = fluid.layers.data(name="label", shape=[block_num ** 2], dtype="int32")
     # * Access to the Network
     result_list, loss = BGSODNet(10).net(img, box, label)
 
@@ -106,7 +106,7 @@ for epoch in range(epochs):
                        feed=train_feeder.feed(data),
                        fetch_list=[result_list, loss])
         # log_obj.add_batch_train_value(outs[0], outs[1], outs[2])
-        print(outs)
+        print(outs[1])
 
     for step, data in enumerate(test_reader()):
         outs = exe.run(program=evl_program,
