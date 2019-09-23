@@ -39,6 +39,15 @@ def conv_p_bn(ipt_layer, name_id, filter_size=3, num_filters=32, padding=1):
     return out
 
 
+def down_pool(ipt_layer, name: int):
+    tmp = fluid.layers.pool2d(input=ipt_layer,
+                              pool_size=2,
+                              pool_stride=2,
+                              pool_type='max',
+                              name='down_pool' + str(name))
+    return tmp
+
+
 def build_backbone_net(ipt):
     """
     骨干网络
@@ -56,6 +65,7 @@ def build_backbone_net(ipt):
     # print(layer_4.shape)
     # print(layer_5.shape)
     # print("Base Net END")
+    # return layer_5, layer_4, layer_3
     return layer_5
 
 
@@ -64,33 +74,56 @@ class BGSODNet:
         # self.fc_size = [Pc, box_x,y,w,h ,class_dim...,]
         self.fc_size = 5 + class_dim
 
-    def net(self, img_ipt, box_ipt_list, label_list):
+    def net(self, img_ipt, box_ipt_list, label_list, img_size, for_train=True):
         anchors = [7, 14, 15, 21, 30, 45]
 
         layer_out = build_backbone_net(img_ipt)
-        layer_out = self.__make_net(layer_out)
-        img_size = fluid.layers.data(name='img_size', shape=[2], dtype='int64')
+        layer_out = self.__make_net_simple(layer_out)
         boxes, scores = fluid.layers.yolo_box(x=layer_out,
                                               img_size=img_size,
                                               class_num=self.fc_size - 5,
-                                              anchors=anchors,
+                                              anchors=anchors[:2],
                                               conf_thresh=0.01,
                                               downsample_ratio=32)
-        loss = fluid.layers.yolov3_loss(layer_out,
-                                        gt_box=box_ipt_list,
-                                        gt_label=label_list,  # 必须是int32 坑死了
-                                        anchors=anchors,
-                                        anchor_mask=[0],  # 取决于合成特征图层个数，此处没有合成
-                                        class_num=self.fc_size - 5,
-                                        ignore_thresh=0.5,
-                                        downsample_ratio=32)
-        return boxes, scores, loss
+        if for_train:
+            loss = fluid.layers.yolov3_loss(layer_out,
+                                            gt_box=box_ipt_list,
+                                            gt_label=label_list,  # 必须是int32 坑死了
+                                            # gt_score=scores,
+                                            anchors=anchors,
+                                            # anchor_mask=[0, 1, 2],  # 取决于合成特征图层个数，此处没有合成
+                                            anchor_mask=[0],
+                                            class_num=self.fc_size - 5,
+                                            ignore_thresh=0.5,
+                                            downsample_ratio=32)
+            return scores, loss
+        else:
+            scores = fluid.layers.reshape(scores, [-1, 81])
+            out_box = fluid.layers.multiclass_nms(bboxes=boxes,
+                                                  scores=scores,
+                                                  background_label=-1,
+                                                  score_threshold=0.5,
+                                                  nms_top_k=100,
+                                                  nms_threshold=0.3,
+                                                  keep_top_k=10,
+                                                  normalized=True)
+            return scores, out_box
 
     def __make_net(self, backbone_net_out):
-        # 1x1卷积降维
+        # 1x1卷积降维,对大尺度特征图进行池化，使其尺寸一致
+        layers = []
+        for i, out_layer in enumerate(backbone_net_out):
+            for num in range(i):
+                out_layer = down_pool(out_layer, i * 10 + num)
+            out = conv_p_bn(out_layer, name_id=10 + i, filter_size=1, num_filters=self.fc_size)
+            layers.append(out)
+        layers_out = fluid.layers.concat(layers, axis=1)
+        return layers_out
+
+    def __make_net_simple(self, backbone_net_out):
+        # 要求输入不能是列表
         out = conv_p_bn(backbone_net_out, name_id=10, filter_size=1, num_filters=self.fc_size)
         return out
-
 
 # Test
 # a = fluid.layers.data(name="a", shape=[3, 512, 512], dtype="float32")

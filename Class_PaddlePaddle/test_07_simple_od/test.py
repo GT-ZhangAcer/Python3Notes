@@ -2,13 +2,13 @@
 # Datetime:2019/9/13
 # Copyright belongs to the author.
 # Please indicate the source for reprinting.
-import PIL.Image as Image
-import numpy as np
-
-a = Image.open("./oridata/1.jpg")
-b = np.array(a)
-print(a.size)
-print(b.shape)
+# import PIL.Image as Image
+# import numpy as np
+#
+# a = Image.open("./oridata/1.jpg")
+# b = np.array(a)
+# print(a.size)
+# print(b.shape)
 #
 # b = [[[1, 2, 4, 5], [12, 12, 14, 51]]]
 # b = np.array(b)
@@ -22,3 +22,6 @@ print(b.shape)
 # info_array = np.zeros([3, 3, 2])
 # info_array[0][0] = [1.8, 2]
 # print(info_array)
+
+for i in range(0):
+    print(i)

@@ -50,8 +50,8 @@ def paste_all_in_one():
         box = (local_w, local_h, local_w + img.size[0], local_h + img.size[1])
         info = [local_w + 0.5 * img.size[0],
                 local_h + 0.5 * img.size[1],
-                0.5 * img.size[0],
-                0.5 * img.size[1],
+                img.size[0],
+                img.size[1],
                 int(label)]
         img_info_list.append(info)
         floor_img.paste(img, box)
@@ -82,4 +82,4 @@ def make_img(make_num, save_path):
 
 
 path = "./data"
-make_img(10000, save_path=path)
+make_img(500, save_path=path)
