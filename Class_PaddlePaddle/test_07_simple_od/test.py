@@ -23,5 +23,6 @@
 # info_array[0][0] = [1.8, 2]
 # print(info_array)
 
-for i in range(0):
-    print(i)
+# a = [1, 2, 3]
+# b = [[i] + [1] for i in a]
+# print(b)

@@ -26,7 +26,8 @@ def conv_p_bn(ipt_layer, name_id, filter_size=3, num_filters=32, padding=1):
                               padding=padding,
                               stride=1,
                               name='conv' + str(name_id),
-                              act='relu')
+                              act='relu',
+                              param_attr=ParamAttr(initializer=fluid.initializer.Normal(0., 0.02)))
     tmp = fluid.layers.pool2d(input=tmp,
                               pool_size=2,
                               pool_stride=2,
@@ -74,8 +75,8 @@ class BGSODNet:
         # self.fc_size = [Pc, box_x,y,w,h ,class_dim...,]
         self.fc_size = 5 + class_dim
 
-    def net(self, img_ipt, box_ipt_list, label_list, img_size, for_train=True):
-        anchors = [7, 14, 15, 21, 30, 45]
+    def net(self, img_ipt, box_ipt_list, label_list, img_size, ture_scores=None, for_train=True):
+        anchors = [27, 34, 45, 51, 60, 75]
 
         layer_out = build_backbone_net(img_ipt)
         layer_out = self.__make_net_simple(layer_out)
@@ -85,11 +86,14 @@ class BGSODNet:
                                               anchors=anchors[:2],
                                               conf_thresh=0.01,
                                               downsample_ratio=32)
+        # print(boxes.shape, scores.shape, layer_out.shape)
+        scores = fluid.layers.transpose(scores, perm=[0, 2, 1])
         if for_train:
+            # print(ture_scores.shape)
             loss = fluid.layers.yolov3_loss(layer_out,
                                             gt_box=box_ipt_list,
                                             gt_label=label_list,  # 必须是int32 坑死了
-                                            # gt_score=scores,
+                                            gt_score=ture_scores,
                                             anchors=anchors,
                                             # anchor_mask=[0, 1, 2],  # 取决于合成特征图层个数，此处没有合成
                                             anchor_mask=[0],
@@ -98,15 +102,13 @@ class BGSODNet:
                                             downsample_ratio=32)
             return scores, loss
         else:
-            scores = fluid.layers.reshape(scores, [-1, 81])
             out_box = fluid.layers.multiclass_nms(bboxes=boxes,
                                                   scores=scores,
                                                   background_label=-1,
-                                                  score_threshold=0.5,
-                                                  nms_top_k=100,
+                                                  score_threshold=0.25,
+                                                  nms_top_k=400,
                                                   nms_threshold=0.3,
-                                                  keep_top_k=10,
-                                                  normalized=True)
+                                                  keep_top_k=-1)
             return scores, out_box
 
     def __make_net(self, backbone_net_out):
