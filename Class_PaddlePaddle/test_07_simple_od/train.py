@@ -11,7 +11,7 @@ epochs = 1  # Number of training rounds
 save_model_path = "./model"
 data_path = "./data"
 img_size = [512, 512]
-block_num = 9  # 单行分块个数
+block_num = 16  # 单行分块个数
 view_pix = img_size[0] // block_num  # 感受野
 learning_rate = 0.00001
 
@@ -108,7 +108,7 @@ for epoch in range(epochs):
         outs = exe.run(program=main_program,
                        feed=train_feeder.feed(data),
                        fetch_list=[scores, loss])
-        print(outs[0][0], outs[1][0])
+        print(outs[1][0])
 
     for step, data in enumerate(test_reader()):
         outs = exe.run(program=evl_program,

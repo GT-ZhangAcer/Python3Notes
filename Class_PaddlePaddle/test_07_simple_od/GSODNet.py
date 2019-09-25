@@ -76,7 +76,7 @@ class BGSODNet:
         self.fc_size = 5 + class_dim
 
     def net(self, img_ipt, box_ipt_list, label_list, img_size, ture_scores=None, for_train=True):
-        anchors = [27, 34, 45, 51, 60, 75]
+        anchors = [14, 30, 45, 51, 60, 75]
 
         layer_out = build_backbone_net(img_ipt)
         layer_out = self.__make_net_simple(layer_out)
@@ -86,7 +86,7 @@ class BGSODNet:
                                               anchors=anchors[:2],
                                               conf_thresh=0.01,
                                               downsample_ratio=32)
-        # print(boxes.shape, scores.shape, layer_out.shape)
+        print(boxes.shape, scores.shape, layer_out.shape)
         scores = fluid.layers.transpose(scores, perm=[0, 2, 1])
         if for_train:
             # print(ture_scores.shape)
@@ -98,7 +98,7 @@ class BGSODNet:
                                             # anchor_mask=[0, 1, 2],  # 取决于合成特征图层个数，此处没有合成
                                             anchor_mask=[0],
                                             class_num=self.fc_size - 5,
-                                            ignore_thresh=0.5,
+                                            ignore_thresh=0.8,
                                             downsample_ratio=32)
             return scores, loss
         else:
@@ -124,7 +124,13 @@ class BGSODNet:
 
     def __make_net_simple(self, backbone_net_out):
         # 要求输入不能是列表
-        out = conv_p_bn(backbone_net_out, name_id=10, filter_size=1, num_filters=self.fc_size)
+        out = fluid.layers.conv2d(input=backbone_net_out,
+                                  num_filters=self.fc_size,
+                                  filter_size=1,
+                                  padding=0,
+                                  stride=1,
+                                  name="end_layer",
+                                  param_attr=ParamAttr(initializer=fluid.initializer.Normal(0., 0.02)))
         return out
 
 # Test
