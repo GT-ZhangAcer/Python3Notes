@@ -27,7 +27,8 @@ def conv_p_bn(ipt_layer, name_id, filter_size=3, num_filters=32, padding=1):
                               stride=1,
                               name='conv' + str(name_id),
                               act='relu',
-                              param_attr=ParamAttr(initializer=fluid.initializer.Normal(0., 0.02)))
+                              param_attr=ParamAttr(initializer=fluid.initializer.Normal(0., 0.02)),
+                              bias_attr=ParamAttr(initializer=fluid.initializer.Constant(0.0), regularizer=L2Decay(0.)))
     tmp = fluid.layers.pool2d(input=tmp,
                               pool_size=2,
                               pool_stride=2,
@@ -55,11 +56,16 @@ def build_backbone_net(ipt):
     :param ipt: 输入数据
     :return: 网络输出
     """
-    layer_1 = conv_p_bn(ipt, 1, filter_size=3, padding=1)
-    layer_2 = conv_p_bn(layer_1, 2, filter_size=3, padding=1, num_filters=64)
-    layer_3 = conv_p_bn(layer_2, 3, filter_size=3, padding=1, num_filters=64)
-    layer_4 = conv_p_bn(layer_3, 4, filter_size=3, padding=1, num_filters=128)
-    layer_5 = conv_p_bn(layer_4, 5, filter_size=3, padding=1, num_filters=128)
+    layer_1 = conv_p_bn(ipt, 1, filter_size=3, padding=0)
+    layer_2 = conv_p_bn(layer_1, 2, filter_size=3, padding=0, num_filters=64)
+    layer_3 = conv_p_bn(layer_2, 3, filter_size=3, padding=0, num_filters=64)
+    layer_4 = conv_p_bn(layer_3, 4, filter_size=3, padding=0, num_filters=128)
+    layer_5 = conv_p_bn(layer_4, 5, filter_size=3, padding=0, num_filters=128)
+    # layer_1 = conv_p_bn(ipt, 1, filter_size=3, padding=1)
+    # layer_2 = conv_p_bn(layer_1, 2, filter_size=3, padding=1, num_filters=64)
+    # layer_3 = conv_p_bn(layer_2, 3, filter_size=3, padding=1, num_filters=64)
+    # layer_4 = conv_p_bn(layer_3, 4, filter_size=3, padding=1, num_filters=128)
+    # layer_5 = conv_p_bn(layer_4, 5, filter_size=3, padding=1, num_filters=128)
     # print(layer_1.shape)
     # print(layer_2.shape)
     # print(layer_3.shape)
@@ -80,6 +86,8 @@ class BGSODNet:
 
         layer_out = build_backbone_net(img_ipt)
         layer_out = self.__make_net_simple(layer_out)
+
+        print(layer_out.shape)
         boxes, scores = fluid.layers.yolo_box(x=layer_out,
                                               img_size=img_size,
                                               class_num=self.fc_size - 5,
@@ -98,13 +106,13 @@ class BGSODNet:
                                             # anchor_mask=[0, 1, 2],  # 取决于合成特征图层个数，此处没有合成
                                             anchor_mask=[0],
                                             class_num=self.fc_size - 5,
-                                            ignore_thresh=0.8,
+                                            ignore_thresh=0.1,
                                             downsample_ratio=32)
             return scores, loss
         else:
             out_box = fluid.layers.multiclass_nms(bboxes=boxes,
                                                   scores=scores,
-                                                  background_label=-1,
+                                                  background_label=10,
                                                   score_threshold=0.25,
                                                   nms_top_k=400,
                                                   nms_threshold=0.3,
@@ -130,7 +138,10 @@ class BGSODNet:
                                   padding=0,
                                   stride=1,
                                   name="end_layer",
-                                  param_attr=ParamAttr(initializer=fluid.initializer.Normal(0., 0.02)))
+                                  param_attr=ParamAttr(initializer=fluid.initializer.Normal(0., 0.02)),
+                                  bias_attr=ParamAttr(initializer=fluid.initializer.Constant(0.0),
+                                                      regularizer=L2Decay(0.)))
+
         return out
 
 # Test

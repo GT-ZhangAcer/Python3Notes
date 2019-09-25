@@ -7,13 +7,13 @@ from GSODNet import BGSODNet
 # Hyper parameter
 use_cuda = True  # Whether to use GPU or not
 batch_size = 2  # Number of incoming batches of data
-epochs = 1  # Number of training rounds
+epochs = 300  # Number of training rounds
 save_model_path = "./model"
 data_path = "./data"
 img_size = [512, 512]
 block_num = 16  # 单行分块个数
 view_pix = img_size[0] // block_num  # 感受野
-learning_rate = 0.00001
+learning_rate = 0.001
 
 
 def info_read(info_path):
@@ -23,15 +23,21 @@ def info_read(info_path):
     :return: np Array :box, label, label
     """
     # 创建一个 H x W x len(box + label) 形状的数组来存储数据
-    info_array = np.zeros([block_num, block_num, 6])
+    # info_array = np.zeros([block_num, block_num, 6])
+    info_array = np.zeros([block_num ** 2, 6])
+    flag_num = 0
     with open(info_path, "r") as f:
         infos = f.read().replace(" ", "").split("\n")
         for info in infos:
             info = info.split(",")
             mini_data = [float(i) for i in info]
-            h = mini_data[0] // view_pix
-            w = mini_data[1] // view_pix
-            info_array[int(h)][int(w)] = mini_data + [1]
+            # h = mini_data[0] // view_pix
+            # w = mini_data[1] // view_pix
+            # info_array[int(h)][int(w)] = mini_data + [1]
+            info_array[flag_num] = mini_data + [1]
+            flag_num += 1
+        for i in range(flag_num, block_num ** 2):
+            info_array[i] = [0] * 5 + [10]
         return info_array
 
 
@@ -50,9 +56,13 @@ def data_reader(for_test=False):
             im = np.array(im).reshape(1, 3, 512, 512).astype(np.float32)
             info_path = data_path + '/info/' + str(i) + ".info"
             info_array = info_read(info_path)
-            box_array = info_array[:, :, :4]
-            label_array = info_array[:, :, 4:5]
-            label_trues = info_array[:, :, 5:6]
+
+            # box_array = info_array[:, :, :4]
+            # label_array = info_array[:, :, 4:5]
+            # label_trues = info_array[:, :, 5:6]
+            box_array = info_array[:, :4]
+            label_array = info_array[:, 4:5]
+            label_trues = info_array[:, 5:6]
             box_array = box_array.reshape(1, block_num ** 2, 4)
             label_array = label_array.reshape(1, block_num ** 2)
             label_trues = label_trues.reshape(1, block_num ** 2)
@@ -108,7 +118,9 @@ for epoch in range(epochs):
         outs = exe.run(program=main_program,
                        feed=train_feeder.feed(data),
                        fetch_list=[scores, loss])
-        print(outs[1][0])
+        print(outs[0], outs[1][0])
+        if step == 100:
+            pass
 
     for step, data in enumerate(test_reader()):
         outs = exe.run(program=evl_program,
