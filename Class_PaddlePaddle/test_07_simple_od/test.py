@@ -2,8 +2,9 @@
 # Datetime:2019/9/13
 # Copyright belongs to the author.
 # Please indicate the source for reprinting.
-# import PIL.Image as Image
-# import numpy as np
+import PIL.Image as Image
+import numpy as np
+
 #
 # a = Image.open("./oridata/1.jpg")
 # b = np.array(a)
@@ -27,5 +28,8 @@
 # b = [[i] + [1] for i in a]
 # print(b)
 
-a = [[1, 2, 3], [1, 2, 3]]
-print(a[:][:][1:2])
+# a = [[1, 2, 3], [1, 2, 3]]
+# b = np.array(a)
+# b[..., :3] = 1
+# print(b)
+

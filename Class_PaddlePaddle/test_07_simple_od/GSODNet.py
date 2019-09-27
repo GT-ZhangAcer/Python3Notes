@@ -56,15 +56,15 @@ def build_backbone_net(ipt):
     :param ipt: 输入数据
     :return: 网络输出
     """
-    layer_1 = conv_p_bn(ipt, 1, filter_size=3, padding=0)
-    layer_2 = conv_p_bn(layer_1, 2, filter_size=3, padding=0, num_filters=64)
-    layer_3 = conv_p_bn(layer_2, 3, filter_size=3, padding=0, num_filters=64)
-    layer_4 = conv_p_bn(layer_3, 4, filter_size=3, padding=0, num_filters=128)
-    layer_5 = conv_p_bn(layer_4, 5, filter_size=3, padding=0, num_filters=128)
-    # layer_1 = conv_p_bn(ipt, 1, filter_size=3, padding=1)
-    # layer_2 = conv_p_bn(layer_1, 2, filter_size=3, padding=1, num_filters=64)
-    # layer_3 = conv_p_bn(layer_2, 3, filter_size=3, padding=1, num_filters=64)
-    # layer_4 = conv_p_bn(layer_3, 4, filter_size=3, padding=1, num_filters=128)
+    # layer_1 = conv_p_bn(ipt, 1, filter_size=3, padding=0)
+    # layer_2 = conv_p_bn(layer_1, 2, filter_size=3, padding=0, num_filters=64)
+    # layer_3 = conv_p_bn(layer_2, 3, filter_size=3, padding=0, num_filters=64)
+    # layer_4 = conv_p_bn(layer_3, 4, filter_size=3, padding=0, num_filters=128)
+    # layer_5 = conv_p_bn(layer_4, 5, filter_size=3, padding=0, num_filters=128)
+    layer_1 = conv_p_bn(ipt, 1, filter_size=3, padding=1)
+    layer_2 = conv_p_bn(layer_1, 2, filter_size=3, padding=1, num_filters=64)
+    layer_3 = conv_p_bn(layer_2, 3, filter_size=3, padding=1, num_filters=64)
+    layer_4 = conv_p_bn(layer_3, 4, filter_size=3, padding=1, num_filters=128)
     # layer_5 = conv_p_bn(layer_4, 5, filter_size=3, padding=1, num_filters=128)
     # print(layer_1.shape)
     # print(layer_2.shape)
@@ -73,7 +73,7 @@ def build_backbone_net(ipt):
     # print(layer_5.shape)
     # print("Base Net END")
     # return layer_5, layer_4, layer_3
-    return layer_5
+    return layer_4
 
 
 class BGSODNet:
@@ -81,7 +81,7 @@ class BGSODNet:
         # self.fc_size = [Pc, box_x,y,w,h ,class_dim...,]
         self.fc_size = 5 + class_dim
 
-    def net(self, img_ipt, box_ipt_list, label_list, img_size, ture_scores=None, for_train=True):
+    def net(self, img_ipt, box_ipt_list, label_list, img_size, true_scores=None, for_train=True):
         anchors = [14, 30, 45, 51, 60, 75]
 
         layer_out = build_backbone_net(img_ipt)
@@ -94,20 +94,31 @@ class BGSODNet:
                                               anchors=anchors[:2],
                                               conf_thresh=0.01,
                                               downsample_ratio=32)
-        print(boxes.shape, scores.shape, layer_out.shape)
+        print(boxes.shape, scores.shape)
         scores = fluid.layers.transpose(scores, perm=[0, 2, 1])
         if for_train:
-            # print(ture_scores.shape)
+
             loss = fluid.layers.yolov3_loss(layer_out,
                                             gt_box=box_ipt_list,
                                             gt_label=label_list,  # 必须是int32 坑死了
-                                            gt_score=ture_scores,
+                                            gt_score=true_scores,
                                             anchors=anchors,
                                             # anchor_mask=[0, 1, 2],  # 取决于合成特征图层个数，此处没有合成
                                             anchor_mask=[0],
                                             class_num=self.fc_size - 5,
                                             ignore_thresh=0.1,
                                             downsample_ratio=32)
+
+            # -----
+            # scores = fluid.layers.transpose(scores, [0, 2, 1])
+            #
+            # scores_loss = fluid.layers.cross_entropy(scores, label_list)
+            # scores_loss = fluid.layers.mean(scores_loss)
+            # loss = scores_loss
+            # -----
+
+
+            # loss = fluid.layers.elementwise_add(scores)
             return scores, loss
         else:
             out_box = fluid.layers.multiclass_nms(bboxes=boxes,
