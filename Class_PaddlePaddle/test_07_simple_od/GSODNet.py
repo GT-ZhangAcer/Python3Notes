@@ -24,16 +24,16 @@ def conv_p_bn(ipt_layer, name_id, filter_size=3, num_filters=32, padding=1):
                               num_filters=num_filters,
                               filter_size=filter_size,
                               padding=padding,
-                              stride=1,
+                              stride=2,
                               name='conv' + str(name_id),
                               act='relu',
                               param_attr=ParamAttr(initializer=fluid.initializer.Normal(0., 0.02)),
                               bias_attr=ParamAttr(initializer=fluid.initializer.Constant(0.0), regularizer=L2Decay(0.)))
-    tmp = fluid.layers.pool2d(input=tmp,
-                              pool_size=2,
-                              pool_stride=2,
-                              pool_type='max',
-                              name='pool' + str(name_id))
+    # tmp = fluid.layers.pool2d(input=tmp,
+    #                           pool_size=2,
+    #                           pool_stride=2,
+    #                           pool_type='max',
+    #                           name='pool' + str(name_id))
     out = fluid.layers.batch_norm(
         input=tmp, act='relu',
         param_attr=ParamAttr(initializer=fluid.initializer.Normal(0., 0.02), regularizer=L2Decay(0.)),
@@ -81,7 +81,7 @@ class BGSODNet:
         # self.fc_size = [Pc, box_x,y,w,h ,class_dim...,]
         self.fc_size = 5 + class_dim
 
-    def net(self, img_ipt, box_ipt_list, label_list, img_size, true_scores=None, for_train=True):
+    def net(self, img_ipt, box_ipt_list, label_list, img_size, for_train=True):
         anchors = [14, 30, 45, 51, 60, 75]
 
         layer_out = build_backbone_net(img_ipt)
@@ -101,13 +101,12 @@ class BGSODNet:
             loss = fluid.layers.yolov3_loss(layer_out,
                                             gt_box=box_ipt_list,
                                             gt_label=label_list,  # 必须是int32 坑死了
-                                            gt_score=true_scores,
                                             anchors=anchors,
                                             # anchor_mask=[0, 1, 2],  # 取决于合成特征图层个数，此处没有合成
                                             anchor_mask=[0],
                                             class_num=self.fc_size - 5,
                                             ignore_thresh=0.1,
-                                            downsample_ratio=32)
+                                            downsample_ratio=16)
 
             # -----
             # scores = fluid.layers.transpose(scores, [0, 2, 1])
@@ -116,7 +115,6 @@ class BGSODNet:
             # scores_loss = fluid.layers.mean(scores_loss)
             # loss = scores_loss
             # -----
-
 
             # loss = fluid.layers.elementwise_add(scores)
             return scores, loss
@@ -152,6 +150,7 @@ class BGSODNet:
                                   param_attr=ParamAttr(initializer=fluid.initializer.Normal(0., 0.02)),
                                   bias_attr=ParamAttr(initializer=fluid.initializer.Constant(0.0),
                                                       regularizer=L2Decay(0.)))
+
 
         return out
 
