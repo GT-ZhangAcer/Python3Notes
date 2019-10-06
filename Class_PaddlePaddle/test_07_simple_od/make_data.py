@@ -42,7 +42,7 @@ def paste_all_in_one():
         send_img = random_size(send_img)
         base_img_list.append(send_img)
         label_info_list.append(label)
-        floor_color = send_img.getpixel((2, 2))
+        # floor_color = send_img.getpixel((2, 2))
     floor_img = Image.new('RGB', (512, 512), floor_color)
     for i, img, label in zip(range(10), base_img_list, label_info_list):
         local_w = random.randint(43 * i, 70 + 43 * i - img.size[0])
