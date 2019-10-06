@@ -7,7 +7,7 @@ from GSODNet import BGSODNet
 # Hyper parameter
 use_cuda = False  # Whether to use GPU or not
 batch_size = 1  # Number of incoming batches of data
-epochs = 300  # Number of training rounds
+epochs = 10 # Number of training rounds
 save_model_path = "./model"
 data_path = "./data"
 img_size = [512, 512]
@@ -80,7 +80,7 @@ with fluid.program_guard(main_program=main_program, startup_program=startup):
     label = fluid.layers.data(name="label", shape=[block_num], dtype="int32")
     img_size_2d = fluid.layers.data(name='img_size', shape=[2], dtype='int32')
     # * Access to the Network
-    scores, loss = BGSODNet(10).net(img, box, label, img_size_2d)
+    loss = BGSODNet(10).net(img, box, label, img_size_2d)
 
     #  Access to statistical information
 
@@ -104,14 +104,9 @@ for epoch in range(epochs):
     for step, data in enumerate(train_reader()):
         outs = exe.run(program=main_program,
                        feed=train_feeder.feed(data),
-                       fetch_list=[scores, loss])
-        print(outs[0], outs[1][0])
+                       fetch_list=[loss])
+        print(outs[0])
         if step == 100:
             pass
-
-    for step, data in enumerate(test_reader()):
-        outs = exe.run(program=evl_program,
-                       feed=train_feeder.feed(data),
-                       fetch_list=[scores, loss])
 
     fluid.io.save_params(executor=exe, dirname=save_model_path + "/One_Epoch", main_program=main_program)

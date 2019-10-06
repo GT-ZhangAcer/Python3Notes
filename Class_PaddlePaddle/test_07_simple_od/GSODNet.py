@@ -56,24 +56,13 @@ def build_backbone_net(ipt):
     :param ipt: 输入数据
     :return: 网络输出
     """
-    # layer_1 = conv_p_bn(ipt, 1, filter_size=3, padding=0)
-    # layer_2 = conv_p_bn(layer_1, 2, filter_size=3, padding=0, num_filters=64)
-    # layer_3 = conv_p_bn(layer_2, 3, filter_size=3, padding=0, num_filters=64)
-    # layer_4 = conv_p_bn(layer_3, 4, filter_size=3, padding=0, num_filters=128)
-    # layer_5 = conv_p_bn(layer_4, 5, filter_size=3, padding=0, num_filters=128)
     layer_1 = conv_p_bn(ipt, 1, filter_size=3, padding=1)
     layer_2 = conv_p_bn(layer_1, 2, filter_size=3, padding=1, num_filters=64)
-    layer_3 = conv_p_bn(layer_2, 3, filter_size=3, padding=1, num_filters=64)
+    layer_3 = conv_p_bn(layer_2, 3, filter_size=3, padding=1, num_filters=128)
     layer_4 = conv_p_bn(layer_3, 4, filter_size=3, padding=1, num_filters=128)
-    # layer_5 = conv_p_bn(layer_4, 5, filter_size=3, padding=1, num_filters=128)
-    # print(layer_1.shape)
-    # print(layer_2.shape)
-    # print(layer_3.shape)
-    # print(layer_4.shape)
-    # print(layer_5.shape)
-    # print("Base Net END")
-    # return layer_5, layer_4, layer_3
-    return layer_4
+    layer_5 = conv_p_bn(layer_4, 4, filter_size=3, padding=1, num_filters=256)
+    layer_6 = conv_p_bn(layer_5, 4, filter_size=3, padding=1, num_filters=256)
+    return layer_6
 
 
 class BGSODNet:
@@ -82,20 +71,12 @@ class BGSODNet:
         self.fc_size = 5 + class_dim
 
     def net(self, img_ipt, box_ipt_list, label_list, img_size, for_train=True):
-        anchors = [14, 30, 45, 51, 60, 75]
+        anchors = [15, 30, 45, 51, 60, 75]
 
         layer_out = build_backbone_net(img_ipt)
         layer_out = self.__make_net_simple(layer_out)
 
         print(layer_out.shape)
-        boxes, scores = fluid.layers.yolo_box(x=layer_out,
-                                              img_size=img_size,
-                                              class_num=self.fc_size - 5,
-                                              anchors=anchors[:2],
-                                              conf_thresh=0.01,
-                                              downsample_ratio=32)
-        print(boxes.shape, scores.shape)
-        scores = fluid.layers.transpose(scores, perm=[0, 2, 1])
         if for_train:
 
             loss = fluid.layers.yolov3_loss(layer_out,
@@ -106,38 +87,26 @@ class BGSODNet:
                                             anchor_mask=[0],
                                             class_num=self.fc_size - 5,
                                             ignore_thresh=0.1,
-                                            downsample_ratio=16)
+                                            downsample_ratio=64)
 
-            # -----
-            # scores = fluid.layers.transpose(scores, [0, 2, 1])
-            #
-            # scores_loss = fluid.layers.cross_entropy(scores, label_list)
-            # scores_loss = fluid.layers.mean(scores_loss)
-            # loss = scores_loss
-            # -----
-
-            # loss = fluid.layers.elementwise_add(scores)
-            return scores, loss
+            return loss
         else:
+            boxes, scores = fluid.layers.yolo_box(x=layer_out,
+                                                  img_size=img_size,
+                                                  class_num=self.fc_size - 5,
+                                                  anchors=anchors[:2],
+                                                  conf_thresh=0.01,
+                                                  downsample_ratio=32)
+            print(boxes.shape, scores.shape)
+            scores = fluid.layers.transpose(scores, perm=[0, 2, 1])
             out_box = fluid.layers.multiclass_nms(bboxes=boxes,
                                                   scores=scores,
                                                   background_label=10,
-                                                  score_threshold=0.25,
+                                                  score_threshold=0.,
                                                   nms_top_k=400,
                                                   nms_threshold=0.3,
                                                   keep_top_k=-1)
             return scores, out_box
-
-    def __make_net(self, backbone_net_out):
-        # 1x1卷积降维,对大尺度特征图进行池化，使其尺寸一致
-        layers = []
-        for i, out_layer in enumerate(backbone_net_out):
-            for num in range(i):
-                out_layer = down_pool(out_layer, i * 10 + num)
-            out = conv_p_bn(out_layer, name_id=10 + i, filter_size=1, num_filters=self.fc_size)
-            layers.append(out)
-        layers_out = fluid.layers.concat(layers, axis=1)
-        return layers_out
 
     def __make_net_simple(self, backbone_net_out):
         # 要求输入不能是列表
@@ -150,7 +119,6 @@ class BGSODNet:
                                   param_attr=ParamAttr(initializer=fluid.initializer.Normal(0., 0.02)),
                                   bias_attr=ParamAttr(initializer=fluid.initializer.Constant(0.0),
                                                       regularizer=L2Decay(0.)))
-
 
         return out
 

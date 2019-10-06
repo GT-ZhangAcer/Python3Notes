@@ -10,7 +10,7 @@ from GSODNet import BGSODNet
 use_cuda = True  # Whether to use GPU or not
 save_model_path = "./model"
 img_size = [512, 512]
-block_num = 16  # 分块个数
+block_num = 10  # 分块个数
 
 # Initialization
 place = fluid.CUDAPlace(0) if use_cuda else fluid.CPUPlace()
@@ -24,9 +24,9 @@ startup = fluid.Program()
 with fluid.program_guard(main_program=main_program, startup_program=startup):
     """Tips:Symbol * stands for Must"""
     # * Define data types
-    img = fluid.layers.data(name="img", shape=[3, img_size[0], img_size[1]], dtype="float32")
-    box = fluid.layers.data(name="box", shape=[block_num ** 2, 4], dtype="float32")
-    label = fluid.layers.data(name="label", shape=[block_num ** 2], dtype="int32")
+    img = fluid.layers.data(name="img", shape=[3, 512, 512], dtype="float32")
+    box = fluid.layers.data(name="box", shape=[block_num, 4], dtype="float32")
+    label = fluid.layers.data(name="label", shape=[block_num], dtype="int32")
     img_size_2d = fluid.layers.data(name='img_size', shape=[2], dtype='int32')
     # * Access to the Network
     scores, boxes = BGSODNet(10).net(img, box, label, img_size_2d, for_train=False)
