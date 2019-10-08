@@ -5,7 +5,6 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from pylab import mpl
 
-
 mpl.rcParams['font.sans-serif'] = ['SimHei']  # 用来显示中文
 
 path = "./"
@@ -13,7 +12,7 @@ params_dirname = path + "test.inference.model"
 print("训练后文件夹路径" + params_dirname)
 # 参数初始化
 # place = fluid.CUDAPlace(0)
-place=fluid.CPUPlace()
+place = fluid.CPUPlace()
 exe = fluid.Executor(place)
 
 # 加载数据
@@ -22,8 +21,8 @@ with open(path + "data/ocrData.txt", 'rt') as f:
     a = f.read()
 
 
-def dataReader():
-    def redaer():
+def data_reader():
+    def reader():
         for i in range(1, 1501):
             im = Image.open(path + "data/" + str(i) + ".jpg").convert('L')
             im = np.array(im).reshape(1, 30, 15).astype(np.float32)
@@ -33,22 +32,8 @@ def dataReader():
             labelInfo = a[i - 1]
             yield im, labelInfo
 
-    return redaer
+    return reader
 
-
-def testReader():
-    def redaer():
-        for i in range(1501, 1951):
-            im = Image.open(path + "data/" + str(i) + ".jpg").convert('L')
-            im = np.array(im).reshape(1, 30, 15).astype(np.float32)
-            im = im / 255.0 * 2.0 - 1.0
-            '''
-            img = paddle.dataset.image.load_image(path + "data/" + str(i+1) + ".jpg")
-            img=np.transpose(img, (2, 0, 1))'''
-            labelInfo = a[i - 1]
-            yield im, labelInfo
-
-    return redaer
 
 # 定义网络
 x = fluid.layers.data(name="x", shape=[1, 30, 15], dtype=datatype)
@@ -95,6 +80,7 @@ def cnn(ipt):
 
     return fc2
 
+
 net = cnn(x)  # CNN模型
 
 cost = fluid.layers.cross_entropy(input=net, label=label)
@@ -104,12 +90,10 @@ acc = fluid.layers.accuracy(input=net, label=label, k=1)
 sgd_optimizer = fluid.optimizer.SGD(learning_rate=0.01)
 sgd_optimizer.minimize(avg_cost)
 # 数据传入设置
-batch_reader = paddle.batch(reader=dataReader(), batch_size=2048)
-testb_reader = paddle.batch(reader=testReader(), batch_size=1024)
-feeder = fluid.DataFeeder(place=place, feed_list=[x,label])
+batch_reader = paddle.batch(reader=data_reader(), batch_size=2048)
+feeder = fluid.DataFeeder(place=place, feed_list=[x, label])
 prog = fluid.default_startup_program()
 exe.run(prog)
-
 
 trainNum = 50
 accL = []
@@ -131,4 +115,3 @@ plt.plot(range(50), accL)
 plt.show()
 
 fluid.io.save_inference_model(params_dirname, ['x'], [net], exe)
-

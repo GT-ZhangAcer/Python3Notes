@@ -2,63 +2,56 @@ import paddle.fluid as fluid
 import paddle
 import numpy as np
 from PIL import Image
+import json
 from GSODNet import BGSODNet
+from mbnet import MobileNetSSD
 
 # Hyper parameter
 use_cuda = False  # Whether to use GPU or not
-batch_size = 3  # Number of incoming batches of data
+batch_size = 10  # Number of incoming batches of data
 epochs = 1  # Number of training rounds
+data_path = "./lslm_data"
 save_model_path = "./model"
-data_path = "./data"
-img_size = [512, 512]
+img_size = [300, 300]
 block_num = 10  # 目标最大数量
-view_pix = img_size[0] // block_num  # 感受野
-learning_rate = 0.001
+learning_rate = 0.0001
 
 
-def info_read(info_path):
-    """
-    读取info文件下数据
-    :param info_path: info文件路径
-    :return:
-    """
-    # 创建一个 H x W x len(box + label) 形状的数组来存储数据
-    info_array = np.zeros([block_num, 5])
-    with open(info_path, "r") as f:
-        infos = f.read().replace(" ", "").split("\n")
-        for info_id, info in enumerate(infos):
-            info = info.split(",")
-            mini_data = [float(i) for i in info]
-            mini_data[-1] = int(mini_data[-1])
-            info_array[info_id] = mini_data
-        return info_array
-
-
-# Reader
-
-def data_reader(for_test=False):
-    start_num = 0
-    end_num = 300
-    if for_test:
-        start_num = 300
-        end_num = 500
-
+def data_reader(scale=300//1080):
     def reader():
-        for i in range(start_num, end_num):
-            im = Image.open(data_path + '/img/' + str(i) + ".jpg")
-            im = np.array(im).transpose((2, 0, 1)).reshape(1, 3, 512, 512).astype(np.float32)
-            info_path = data_path + '/info/' + str(i) + ".info"
-            info_array = info_read(info_path)
-            box_array = info_array[:, :4]
-            label_array = info_array[:, 4:5]
-            box_array = box_array.reshape(1, block_num, 4)
-            label_array = label_array.reshape(1, block_num, 1)
-            img_size_array = np.array(img_size).reshape(1, 2).astype(np.int32)
-            yield im, box_array, label_array, img_size_array
+        with open("./lslm_data/train.txt", "r") as f:
+            infos = f.read().split("\n")
+            for line in infos:
+                info = line.split("\t")
+                if info[-1] is "":
+                    info.pop(-1)
+                img_name = info[0]
+                label_infos = info[2:]
+                box_list = []
+                label_list = []
+                for label_info in label_infos:
+                    label_info = json.loads(label_info)
+                    if label_info["value"] == "bolt":
+                        this_label = 1
+                    else:
+                        this_label = 2
+                    up_x, up_y = label_info["coordinate"][0]
+                    down_x, down_y = label_info["coordinate"][1]
+                    this_box = [(up_x + down_x) * 0.5 - 360, (up_y + down_y) * 0.5, down_x - up_x, down_y - up_y]
+                    box_list.append(this_box)
+                    label_list.append(this_label)
+                im = Image.open(data_path + "/" + img_name)
+                im = im.crop((360, 0, 1440, 1080))
+                im = im.resize((300, 300), Image.LANCZOS)
+                im = np.array(im).transpose((2, 0, 1)).reshape(1, 3, 300, 300)
+                box_list = np.array(box_list) * scale
+                label_list = np.array(label_list) * scale
+                yield im, box_list, label_list
 
     return reader
 
 
+data_reader()
 # Initialization
 place = fluid.CUDAPlace(0) if use_cuda else fluid.CPUPlace()
 exe = fluid.Executor(place)
@@ -74,12 +67,12 @@ startup = fluid.Program()
 with fluid.program_guard(main_program=main_program, startup_program=startup):
     """Tips:Symbol * stands for Must"""
     # * Define data types
-    img = fluid.layers.data(name="img", shape=[3, 512, 512], dtype="float32")
-    box = fluid.layers.data(name="box", shape=[block_num, 4], dtype="float32")
-    label = fluid.layers.data(name="label", shape=[block_num], dtype="int32")
-    img_size_2d = fluid.layers.data(name='img_size', shape=[2], dtype='int32')
+    img = fluid.layers.data(name="img", shape=[3] + img_size, dtype="float32")
+    box = fluid.layers.data(name="box", shape=[4], dtype="float32", lod_level=1)
+    label = fluid.layers.data(name="label", shape=[1], dtype="int32", lod_level=1)
     # * Access to the Network
-    loss = BGSODNet(10).net(img, box, label, img_size_2d)
+    # loss = BGSODNet(10).net(img, box, label)
+    loss = MobileNetSSD().net(img, box, label)
 
     #  Access to statistical information
 
@@ -92,8 +85,7 @@ with fluid.program_guard(main_program=main_program, startup_program=startup):
 # Feed configure
 # if you want to shuffle "reader=paddle.reader.shuffle(dataReader(), buf_size)"
 train_reader = paddle.batch(reader=paddle.reader.shuffle(data_reader(), 500), batch_size=batch_size)
-test_reader = paddle.batch(reader=data_reader(for_test=True), batch_size=batch_size)
-train_feeder = fluid.DataFeeder(place=place, feed_list=[img, box, label, img_size_2d])
+train_feeder = fluid.DataFeeder(place=place, feed_list=[img, box, label])
 
 # Train Process
 exe.run(startup)
@@ -105,7 +97,7 @@ for epoch in range(epochs):
                        feed=train_feeder.feed(data),
                        fetch_list=[loss])
         print(outs[0])
-        if step == 100:
+        if step == 50:
             pass
 
     fluid.io.save_params(executor=exe, dirname=save_model_path + "/One_Epoch", main_program=main_program)

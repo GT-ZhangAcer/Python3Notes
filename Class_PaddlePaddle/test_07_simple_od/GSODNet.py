@@ -5,99 +5,99 @@
 
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
-from paddle.fluid.regularizer import L2Decay
+from paddle.fluid.initializer import MSRA
 
 
 # img_size = (512, 512)
 
-def conv_p_bn(ipt_layer, name_id, filter_size=3, num_filters=32, padding=1):
-    """
-    卷积池化BN层三合一函数
-    :param ipt_layer: 输入层
-    :param name_id: 层标识名
-    :param filter_size: 卷积核大小
-    :param num_filters: 卷积核个数
-    :param padding: 填充
-    :return: [N x C x H x W] N: Batch_size, C: channel, H: layer_H, W: Layer_W
-    """
-    tmp = fluid.layers.conv2d(input=ipt_layer,
-                              num_filters=num_filters,
-                              filter_size=filter_size,
-                              padding=padding,
-                              stride=2,
-                              name='conv' + str(name_id),
-                              act='relu',
-                              param_attr=ParamAttr(initializer=fluid.initializer.Normal(0., 0.02)),
-                              bias_attr=ParamAttr(initializer=fluid.initializer.Constant(0.0), regularizer=L2Decay(0.)))
-    # tmp = fluid.layers.pool2d(input=tmp,
-    #                           pool_size=2,
-    #                           pool_stride=2,
-    #                           pool_type='max',
-    #                           name='pool' + str(name_id))
-    out = fluid.layers.batch_norm(
-        input=tmp, act='relu',
-        param_attr=ParamAttr(initializer=fluid.initializer.Normal(0., 0.02), regularizer=L2Decay(0.)),
-        bias_attr=ParamAttr(initializer=fluid.initializer.Constant(0.0), regularizer=L2Decay(0.)))
-    return out
+def conv_bn(
+        input,
+        filter_size,
+        num_filters,
+        stride,
+        padding,
+        num_groups=1,
+        act='relu',
+        use_cudnn=True):
+    parameter_attr = ParamAttr(learning_rate=0.1, initializer=MSRA())
+    conv = fluid.layers.conv2d(
+        input=input,
+        num_filters=num_filters,
+        filter_size=filter_size,
+        stride=stride,
+        padding=padding,
+        groups=num_groups,
+        use_cudnn=use_cudnn,
+        param_attr=parameter_attr,
+        bias_attr=False)
+    return fluid.layers.batch_norm(input=conv, act=act)
 
 
-def down_pool(ipt_layer, name: int):
-    tmp = fluid.layers.pool2d(input=ipt_layer,
-                              pool_size=2,
-                              pool_stride=2,
-                              pool_type='max',
-                              name='down_pool' + str(name))
-    return tmp
+def depthwise_separable(input, num_filters1, num_filters2, num_groups, stride, scale):
+    depthwise_conv = conv_bn(
+        input=input,
+        filter_size=3,
+        num_filters=int(num_filters1 * scale),
+        stride=stride,
+        padding=1,
+        num_groups=int(num_groups * scale),
+        use_cudnn=False)
+
+    pointwise_conv = conv_bn(
+        input=depthwise_conv,
+        filter_size=1,
+        num_filters=int(num_filters2 * scale),
+        stride=1,
+        padding=0)
+    return pointwise_conv
 
 
 def build_backbone_net(ipt):
     """
-    骨干网络
+    基础网络
     :param ipt: 输入数据
     :return: 网络输出
     """
-    layer_1 = conv_p_bn(ipt, 1, filter_size=3, padding=1)
-    layer_2 = conv_p_bn(layer_1, 2, filter_size=3, padding=1, num_filters=64)
-    layer_3 = conv_p_bn(layer_2, 3, filter_size=3, padding=1, num_filters=128)
-    layer_4 = conv_p_bn(layer_3, 4, filter_size=3, padding=1, num_filters=128)
-    layer_5 = conv_p_bn(layer_4, 4, filter_size=3, padding=1, num_filters=256)
-    layer_6 = conv_p_bn(layer_5, 4, filter_size=3, padding=1, num_filters=256)
-    return layer_6
+    layer_1 = conv_bn(ipt, filter_size=3, num_filters=64, stride=2, padding=1)
+    layer_2 = conv_bn(layer_1, filter_size=3, num_filters=128, stride=2, padding=1)
+    layer_3 = conv_bn(layer_2, filter_size=3, num_filters=256, stride=2, padding=1)
+    layer_4 = conv_bn(layer_3, filter_size=3, num_filters=512, stride=2, padding=1)
+    print(layer_2.shape, layer_3.shape, layer_4.shape)
+    return [layer_2, layer_3, layer_4]
 
 
 class BGSODNet:
     def __init__(self, class_dim=10):
-        # self.fc_size = [Pc, box_x,y,w,h ,class_dim...,]
         self.fc_size = 5 + class_dim
 
-    def net(self, img_ipt, box_ipt_list, label_list, img_size, for_train=True):
-        anchors = [15, 30, 45, 51, 60, 75]
+    def net(self, img_ipt, box_ipt_list, label_list, for_train=True):
 
         layer_out = build_backbone_net(img_ipt)
-        layer_out = self.__make_net_simple(layer_out)
 
-        print(layer_out.shape)
+        mbox_locs, mbox_confs, boxs, vars = fluid.layers.multi_box_head(
+            inputs=layer_out,
+            image=img_ipt,
+            num_classes=10,
+            min_ratio=3,
+            max_ratio=50,
+            aspect_ratios=[[1., 2.], [1., 2.], [1., 2.]],
+            base_size=512,
+            offset=0.5,
+            flip=True,
+            clip=True)
+
         if for_train:
 
-            loss = fluid.layers.yolov3_loss(layer_out,
-                                            gt_box=box_ipt_list,
-                                            gt_label=label_list,  # 必须是int32 坑死了
-                                            anchors=anchors,
-                                            # anchor_mask=[0, 1, 2],  # 取决于合成特征图层个数，此处没有合成
-                                            anchor_mask=[0],
-                                            class_num=self.fc_size - 5,
-                                            ignore_thresh=0.1,
-                                            downsample_ratio=64)
+            loss = fluid.layers.ssd_loss(location=mbox_locs,
+                                         confidence=mbox_confs,
+                                         gt_box=box_ipt_list,
+                                         gt_label=label_list,
+                                         prior_box=boxs,
+                                         prior_box_var=vars)
 
             return loss
         else:
-            boxes, scores = fluid.layers.yolo_box(x=layer_out,
-                                                  img_size=img_size,
-                                                  class_num=self.fc_size - 5,
-                                                  anchors=anchors[:2],
-                                                  conf_thresh=0.01,
-                                                  downsample_ratio=32)
-            print(boxes.shape, scores.shape)
+
             scores = fluid.layers.transpose(scores, perm=[0, 2, 1])
             out_box = fluid.layers.multiclass_nms(bboxes=boxes,
                                                   scores=scores,
@@ -107,20 +107,6 @@ class BGSODNet:
                                                   nms_threshold=0.3,
                                                   keep_top_k=-1)
             return scores, out_box
-
-    def __make_net_simple(self, backbone_net_out):
-        # 要求输入不能是列表
-        out = fluid.layers.conv2d(input=backbone_net_out,
-                                  num_filters=self.fc_size,
-                                  filter_size=1,
-                                  padding=0,
-                                  stride=1,
-                                  name="end_layer",
-                                  param_attr=ParamAttr(initializer=fluid.initializer.Normal(0., 0.02)),
-                                  bias_attr=ParamAttr(initializer=fluid.initializer.Constant(0.0),
-                                                      regularizer=L2Decay(0.)))
-
-        return out
 
 # Test
 # a = fluid.layers.data(name="a", shape=[3, 512, 512], dtype="float32")
