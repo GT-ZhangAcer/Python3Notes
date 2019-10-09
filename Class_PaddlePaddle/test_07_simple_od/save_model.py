@@ -5,6 +5,7 @@
 
 import paddle.fluid as fluid
 from GSODNet import BGSODNet
+from mbnet import MobileNetSSD
 
 # Hyper parameter
 use_cuda = True  # Whether to use GPU or not

@@ -104,11 +104,9 @@ class MobileNetSSD:
         mbox_locs, mbox_confs, boxs, vars = fluid.layers.multi_box_head(
             inputs=[module11, module13, module14, module15, module16, module17],
             image=img,
-            num_classes=2,
+            num_classes=3,
             min_ratio=20,
             max_ratio=90,
-            min_sizes=[1., 105.0, 150.0, 195.0, 240.0, 285.0],
-            max_sizes=[[], 150.0, 195.0, 240.0, 285.0, 300.0],
             aspect_ratios=[[2.], [2., 3.], [2., 3.], [2., 3.], [2., 3.], [2., 3.]],
             base_size=300,
             offset=0.5,
@@ -121,4 +119,9 @@ class MobileNetSSD:
                                      gt_label=label_list,
                                      prior_box=boxs,
                                      prior_box_var=vars)
-        return loss
+        loss = fluid.layers.mean(loss)
+        nmsed_out = fluid.layers.detection_output(mbox_locs, mbox_confs, boxs, vars, nms_threshold=0.45)  # 非极大值抑制得到的结果
+        map_eval = fluid.metrics.DetectionMAP(nmsed_out, label_list, box_ipt_list, class_num=3, overlap_threshold=0.5,
+                                              evaluate_difficult=False, ap_version='11point')
+        cur_map, accum_map = map_eval.get_map_var()
+        return loss, cur_map, accum_map

@@ -3,21 +3,20 @@ import paddle
 import numpy as np
 from PIL import Image
 import json
-from GSODNet import BGSODNet
 from mbnet import MobileNetSSD
 
 # Hyper parameter
-use_cuda = False  # Whether to use GPU or not
-batch_size = 10  # Number of incoming batches of data
-epochs = 1  # Number of training rounds
+use_cuda = True  # Whether to use GPU or not
+batch_size = 4  # Number of incoming batches of data
+epochs = 1000  # Number of training rounds
 data_path = "./lslm_data"
 save_model_path = "./model"
 img_size = [300, 300]
 block_num = 10  # 目标最大数量
-learning_rate = 0.0001
+learning_rate = 0.001
 
 
-def data_reader(scale=300//1080):
+def data_reader():
     def reader():
         with open("./lslm_data/train.txt", "r") as f:
             infos = f.read().split("\n")
@@ -37,15 +36,19 @@ def data_reader(scale=300//1080):
                         this_label = 2
                     up_x, up_y = label_info["coordinate"][0]
                     down_x, down_y = label_info["coordinate"][1]
-                    this_box = [(up_x + down_x) * 0.5 - 360, (up_y + down_y) * 0.5, down_x - up_x, down_y - up_y]
+                    # this_box = [((up_x + down_x) * 0.5 - 360) / 1440,
+                    #             ((up_y + down_y) * 0.5) / 1080,
+                    #             (down_x - up_x) / 1440,
+                    #             (down_y - up_y) / 1080]
+                    this_box = [up_x / 1440, up_y / 1080, down_x / 1440, down_y / 1080]
                     box_list.append(this_box)
                     label_list.append(this_label)
                 im = Image.open(data_path + "/" + img_name)
                 im = im.crop((360, 0, 1440, 1080))
                 im = im.resize((300, 300), Image.LANCZOS)
-                im = np.array(im).transpose((2, 0, 1)).reshape(1, 3, 300, 300)
-                box_list = np.array(box_list) * scale
-                label_list = np.array(label_list) * scale
+                im = np.array(im).transpose((2, 0, 1)).reshape(1, 3, 300, 300) * 0.007843
+                box_list = np.array(box_list)
+                label_list = np.array(label_list)
                 yield im, box_list, label_list
 
     return reader
@@ -72,15 +75,17 @@ with fluid.program_guard(main_program=main_program, startup_program=startup):
     label = fluid.layers.data(name="label", shape=[1], dtype="int32", lod_level=1)
     # * Access to the Network
     # loss = BGSODNet(10).net(img, box, label)
-    loss = MobileNetSSD().net(img, box, label)
+    loss, cur_map, accum_map = MobileNetSSD().net(img, box, label)
 
     #  Access to statistical information
 
     # Clone program
-    evl_program = main_program.clone(for_test=True)
+    # evl_program = main_program.clone(for_test=True)
     # * Define the optimizer
     opt = fluid.optimizer.Adam(learning_rate=learning_rate)
     opt.minimize(loss)
+
+fluid.io.load_params(executor=exe, dirname=save_model_path + "/Epoch100", main_program=main_program)
 
 # Feed configure
 # if you want to shuffle "reader=paddle.reader.shuffle(dataReader(), buf_size)"
@@ -95,9 +100,9 @@ for epoch in range(epochs):
     for step, data in enumerate(train_reader()):
         outs = exe.run(program=main_program,
                        feed=train_feeder.feed(data),
-                       fetch_list=[loss])
-        print(outs[0])
-        if step == 50:
-            pass
+                       fetch_list=[loss, cur_map, accum_map])
 
-    fluid.io.save_params(executor=exe, dirname=save_model_path + "/One_Epoch", main_program=main_program)
+        if step == 0:
+            print(outs[0], outs[1], outs[2])
+
+    # fluid.io.save_params(executor=exe, dirname=save_model_path + "/Epoch100", main_program=main_program)
