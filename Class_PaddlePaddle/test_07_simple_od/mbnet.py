@@ -72,7 +72,7 @@ class MobileNetSSD:
             padding=1)
         return normal_conv
 
-    def net(self, img, box_ipt_list, label_list, scale=1.0):
+    def net(self, img, scale=1.0, box_ipt_list=None, label_list=None, for_test=False):
         # 300x300
         tmp = self.conv_bn(img, 3, int(32 * scale), 2, 1)
         # 150x150
@@ -113,15 +113,18 @@ class MobileNetSSD:
             flip=True,
             clip=True)
 
-        loss = fluid.layers.ssd_loss(location=mbox_locs,
-                                     confidence=mbox_confs,
-                                     gt_box=box_ipt_list,
-                                     gt_label=label_list,
-                                     prior_box=boxs,
-                                     prior_box_var=vars)
-        loss = fluid.layers.mean(loss)
-        nmsed_out = fluid.layers.detection_output(mbox_locs, mbox_confs, boxs, vars, nms_threshold=0.45)  # 非极大值抑制得到的结果
-        map_eval = fluid.metrics.DetectionMAP(nmsed_out, label_list, box_ipt_list, class_num=3, overlap_threshold=0.5,
-                                              evaluate_difficult=False, ap_version='11point')
-        cur_map, accum_map = map_eval.get_map_var()
-        return loss, cur_map, accum_map
+        nms_out = fluid.layers.detection_output(mbox_locs, mbox_confs, boxs, vars, nms_threshold=0.45)  # 非极大值抑制得到的结果
+        if for_test:
+            return nms_out
+        else:
+            loss = fluid.layers.ssd_loss(location=mbox_locs,
+                                         confidence=mbox_confs,
+                                         gt_box=box_ipt_list,
+                                         gt_label=label_list,
+                                         prior_box=boxs,
+                                         prior_box_var=vars)
+            loss = fluid.layers.mean(loss)
+            map_eval = fluid.metrics.DetectionMAP(nms_out, label_list, box_ipt_list, class_num=3, overlap_threshold=0.5,
+                                                  evaluate_difficult=False, ap_version='11point')
+            cur_map, accum_map = map_eval.get_map_var()
+            return loss, cur_map, accum_map

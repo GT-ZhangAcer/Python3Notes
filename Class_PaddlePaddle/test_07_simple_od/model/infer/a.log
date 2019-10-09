@@ -1,3 +1,0 @@
-visualdl --model_pb F:\Python3Notes\Class_PaddlePaddle\test02_img\test02.inference.CNNmodel --logdir F:\Python3Notes\Class_PaddlePaddle\test02_img\Main_log -t 127.0.0.200
-
-visualdl --model_pb F:\Python3Notes\Class_PaddlePaddle\test02_img\test02.inference.CNNmodel --logdir F:\Python3Notes\Class_PaddlePaddle\test02_img\Main_log -t 127.0.0.200

@@ -8,7 +8,7 @@ from mbnet import MobileNetSSD
 # Hyper parameter
 use_cuda = True  # Whether to use GPU or not
 batch_size = 4  # Number of incoming batches of data
-epochs = 1000  # Number of training rounds
+epochs = 100  # Number of training rounds
 data_path = "./lslm_data"
 save_model_path = "./model"
 img_size = [300, 300]
@@ -75,7 +75,7 @@ with fluid.program_guard(main_program=main_program, startup_program=startup):
     label = fluid.layers.data(name="label", shape=[1], dtype="int32", lod_level=1)
     # * Access to the Network
     # loss = BGSODNet(10).net(img, box, label)
-    loss, cur_map, accum_map = MobileNetSSD().net(img, box, label)
+    loss, cur_map, _ = MobileNetSSD().net(img, box_ipt_list=box, label_list=label)
 
     #  Access to statistical information
 
@@ -85,7 +85,7 @@ with fluid.program_guard(main_program=main_program, startup_program=startup):
     opt = fluid.optimizer.Adam(learning_rate=learning_rate)
     opt.minimize(loss)
 
-fluid.io.load_params(executor=exe, dirname=save_model_path + "/Epoch100", main_program=main_program)
+fluid.io.load_persistables(executor=exe, dirname=save_model_path + "/Epoch_60", main_program=main_program)
 
 # Feed configure
 # if you want to shuffle "reader=paddle.reader.shuffle(dataReader(), buf_size)"
@@ -100,9 +100,9 @@ for epoch in range(epochs):
     for step, data in enumerate(train_reader()):
         outs = exe.run(program=main_program,
                        feed=train_feeder.feed(data),
-                       fetch_list=[loss, cur_map, accum_map])
+                       fetch_list=[loss, cur_map])
 
         if step == 0:
-            print(outs[0], outs[1], outs[2])
+            print(outs[0], outs[1])
 
-    # fluid.io.save_params(executor=exe, dirname=save_model_path + "/Epoch100", main_program=main_program)
+    # fluid.io.save_persistables(executor=exe, dirname=save_model_path + "/Epoch_" + str(epoch), main_program=main_program)

@@ -4,14 +4,12 @@
 # Please indicate the source for reprinting.
 
 import paddle.fluid as fluid
-from GSODNet import BGSODNet
 from mbnet import MobileNetSSD
 
 # Hyper parameter
 use_cuda = True  # Whether to use GPU or not
 save_model_path = "./model"
-img_size = [512, 512]
-block_num = 10  # 分块个数
+img_size = [300, 300]
 
 # Initialization
 place = fluid.CUDAPlace(0) if use_cuda else fluid.CPUPlace()
@@ -23,19 +21,16 @@ startup = fluid.Program()
 
 # Edit Program
 with fluid.program_guard(main_program=main_program, startup_program=startup):
-    """Tips:Symbol * stands for Must"""
     # * Define data types
-    img = fluid.layers.data(name="img", shape=[3, 512, 512], dtype="float32")
-    box = fluid.layers.data(name="box", shape=[1, 4], dtype="float32", lod_level=1)
-    label = fluid.layers.data(name="label", shape=[1], dtype="int32", lod_level=1)
-    img_size_2d = fluid.layers.data(name='img_size', shape=[2], dtype='int32')
+    img = fluid.layers.data(name="img", shape=[3] + img_size, dtype="float32")
     # * Access to the Network
-    scores, boxes = BGSODNet(10).net(img, box, label, img_size_2d, for_train=False)
+    # loss = BGSODNet(10).net(img, box, label)
+    nms_out = MobileNetSSD().net(img, for_test=True)
 
 # Train Process
 exe.run(startup)
 
-fluid.io.load_params(executor=exe, dirname=save_model_path + "/One_Epoch", main_program=main_program)
-fluid.io.save_inference_model(dirname=save_model_path + "/infer", feeded_var_names=["img", "img_size"],
-                              target_vars=[boxes],
+fluid.io.load_persistables(executor=exe, dirname=save_model_path + "/Epoch_74", main_program=main_program)
+fluid.io.save_inference_model(dirname=save_model_path + "/infer", feeded_var_names=[img.name],
+                              target_vars=[nms_out],
                               executor=exe, main_program=main_program)
