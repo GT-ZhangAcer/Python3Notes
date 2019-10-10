@@ -26,7 +26,7 @@ def paste_all_in_one():
     """
     随机将多个基础验证码合并到一张大图中
     :return:Pil_obj,label_info
-    label_info Type: Ox(中心x坐标), Oy(中心y坐标), H(距离中心点H方向距离), W(距离中心点W方向距离), label
+    label_info Type: x_min, y_min, x_max, y_max, label
     """
     data_path = "./oridata/"
     sum_base_img = random.randint(3, 10)
@@ -48,10 +48,10 @@ def paste_all_in_one():
         local_w = random.randint(43 * i, 70 + 43 * i - img.size[0])
         local_h = random.randint(1, 500 - img.size[1])
         box = (local_w, local_h, local_w + img.size[0], local_h + img.size[1])
-        info = [local_w + 0.5 * img.size[0],
-                local_h + 0.5 * img.size[1],
-                img.size[0],
-                img.size[1],
+        info = [local_w,
+                local_h,
+                local_w + img.size[0],
+                local_h + img.size[1],
                 int(label)]
         img_info_list.append(info)
         floor_img.paste(img, box)
