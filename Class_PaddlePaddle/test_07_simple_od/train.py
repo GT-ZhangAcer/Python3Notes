@@ -53,24 +53,24 @@ learning_rate = 0.001
 #
 #     return reader
 
-def reader():
-    def yield_data():
-        for index in range(500):
-            box_list = []
-            label_list = []
-            with open(data_path + "/info/" + str(index) + ".info") as f:
-                lines = f.read()
-                for line in lines.split("\n"):
-                    info = line.split(", ")
-                    box_list.append([float(size)/512 for size in info[:4]])
-                    label_list.append(info[-1])
-            im = Image.open(data_path + "/img/" + str(index) + ".jpg")
-            im = im.resize((300, 300), Image.LANCZOS)
-            im = np.array(im).transpose((2, 0, 1)).reshape(1, 3, 300, 300) / 255
-            box_list = np.array(box_list)
-            label_list = np.array(label_list)
-            yield im, box_list, label_list
-    return yield_data
+# def reader():
+#     def yield_data():
+#         for index in range(500):
+#             box_list = []
+#             label_list = []
+#             with open(data_path + "/info/" + str(index) + ".info") as f:
+#                 lines = f.read()
+#                 for line in lines.split("\n"):
+#                     info = line.split(", ")
+#                     box_list.append([float(size)/512 for size in info[:4]])
+#                     label_list.append(info[-1])
+#             im = Image.open(data_path + "/img/" + str(index) + ".jpg")
+#             im = im.resize((300, 300), Image.LANCZOS)
+#             im = np.array(im).transpose((2, 0, 1)).reshape(1, 3, 300, 300) / 255
+#             box_list = np.array(box_list)
+#             label_list = np.array(label_list)
+#             yield im, box_list, label_list
+#     return yield_data
 
 
 # Initialization
