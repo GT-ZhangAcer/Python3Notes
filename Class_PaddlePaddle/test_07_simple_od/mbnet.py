@@ -100,7 +100,7 @@ class MobileNetSSD:
         module16 = self.extra_block(module15, 128, 256, 1, 2, scale)
         # 2x2
         module17 = self.extra_block(module16, 64, 128, 1, 2, scale)
-
+        # print(module17.shape, module16.shape, module15.shape)
         mbox_locs, mbox_confs, boxs, vars = fluid.layers.multi_box_head(
             inputs=[module11, module13, module14, module15, module16, module17],
             image=img,

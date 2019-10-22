@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image
 import json
 from mbnet import MobileNetSSD
+from GSODNet import BGSODNet
 
 # Hyper parameter
 use_cuda = True  # Whether to use GPU or not
@@ -11,7 +12,7 @@ batch_size = 4  # Number of incoming batches of data
 epochs = 100  # Number of training rounds
 data_path = "./data"
 save_model_path = "./model"
-img_size = [300, 300]
+img_size = [512, 512]
 block_num = 10  # 目标最大数量
 learning_rate = 0.001
 
@@ -53,24 +54,25 @@ learning_rate = 0.001
 #
 #     return reader
 
-# def reader():
-#     def yield_data():
-#         for index in range(500):
-#             box_list = []
-#             label_list = []
-#             with open(data_path + "/info/" + str(index) + ".info") as f:
-#                 lines = f.read()
-#                 for line in lines.split("\n"):
-#                     info = line.split(", ")
-#                     box_list.append([float(size)/512 for size in info[:4]])
-#                     label_list.append(info[-1])
-#             im = Image.open(data_path + "/img/" + str(index) + ".jpg")
-#             im = im.resize((300, 300), Image.LANCZOS)
-#             im = np.array(im).transpose((2, 0, 1)).reshape(1, 3, 300, 300) / 255
-#             box_list = np.array(box_list)
-#             label_list = np.array(label_list)
-#             yield im, box_list, label_list
-#     return yield_data
+def reader():
+    def yield_data():
+        for index in range(500):
+            box_list = []
+            label_list = []
+            with open(data_path + "/info/" + str(index) + ".info") as f:
+                lines = f.read()
+                for line in lines.split("\n"):
+                    info = line.split(", ")
+                    box_list.append([float(size) / 512 for size in info[:4]])
+                    label_list.append(info[-1])
+            im = Image.open(data_path + "/img/" + str(index) + ".jpg")
+            # im = im.resize((300, 300), Image.LANCZOS)
+            im = np.array(im).transpose((2, 0, 1)).reshape(1, 3, 512, 512) / 255
+            box_list = np.array(box_list)
+            label_list = np.array(label_list)
+            yield im, box_list, label_list
+
+    return yield_data
 
 
 # Initialization
@@ -92,8 +94,8 @@ with fluid.program_guard(main_program=main_program, startup_program=startup):
     box = fluid.layers.data(name="box", shape=[4], dtype="float32", lod_level=1)
     label = fluid.layers.data(name="label", shape=[1], dtype="int32", lod_level=1)
     # * Access to the Network
-    # loss = BGSODNet(10).net(img, box, label)
-    loss, cur_map, _ = MobileNetSSD().net(img, box_ipt_list=box, label_list=label)
+    loss, cur_map, accum_map, map_eval = BGSODNet(10).net(img, box, label)
+    # loss, cur_map, _ = MobileNetSSD().net(img, box_ipt_list=box, label_list=label)
 
     #  Access to statistical information
 
@@ -118,9 +120,10 @@ for epoch in range(epochs):
     for step, data in enumerate(train_reader()):
         outs = exe.run(program=main_program,
                        feed=train_feeder.feed(data),
-                       fetch_list=[loss, cur_map])
+                       fetch_list=[loss, cur_map, accum_map])
 
         if step == 0:
-            print(outs[0], outs[1])
+            print(outs[0], outs[1], outs[2])
+            map_eval.reset(exe)
 
     fluid.io.save_persistables(executor=exe, dirname=save_model_path + "/OCR_" + str(epoch), main_program=main_program)

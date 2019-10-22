@@ -65,13 +65,13 @@ def net(input):
     img = fluid.layers.fc(input=img, size=64, act="relu")
     img = fluid.layers.fc(input=img, size=128, act="relu")
     img = fluid.layers.fc(input=img, size=shape[2] * shape[1], act="relu")
-    img = fluid.layers.reshape(x=img, shape=[-1,shape[1], shape[2]])
+    img = fluid.layers.reshape(x=img, shape=[-1, shape[1], shape[2]])
 
     return img, pltdata
 
 
 net_x, pltdata = net(x)
-net_y = fluid.layers.reshape(x=y, shape=[-1,shape[1], shape[2]])
+net_y = fluid.layers.reshape(x=y, shape=[-1, shape[1], shape[2]])
 
 # 定义损失函数
 cost = fluid.layers.square_error_cost(input=net_x, label=net_y)

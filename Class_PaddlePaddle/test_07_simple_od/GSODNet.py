@@ -52,6 +52,30 @@ def depthwise_separable(input, num_filters1, num_filters2, num_groups, stride, s
     return pointwise_conv
 
 
+def box_conv(ipt, filter):
+    """
+    提供输出的卷积函数
+    """
+    # 1x1
+    conv = conv_bn(
+        input=ipt,
+        filter_size=1,
+        num_filters=filter,
+        stride=1,
+        num_groups=1,
+        padding=0)
+
+    # 3x3
+    conv = conv_bn(
+        input=conv,
+        filter_size=3,
+        num_filters=filter,
+        stride=2,
+        num_groups=1,
+        padding=1)
+    return conv
+
+
 def build_backbone_net(ipt):
     """
     基础网络
@@ -62,15 +86,18 @@ def build_backbone_net(ipt):
     layer_2 = conv_bn(layer_1, filter_size=3, num_filters=128, stride=2, padding=1)
     layer_3 = conv_bn(layer_2, filter_size=3, num_filters=256, stride=2, padding=1)
     layer_4 = conv_bn(layer_3, filter_size=3, num_filters=512, stride=2, padding=1)
-    print(layer_2.shape, layer_3.shape, layer_4.shape)
-    return [layer_2, layer_3, layer_4]
+    out1 = box_conv(layer_2, 32)
+    out2 = box_conv(layer_3, 64)
+    out3 = box_conv(layer_4, 128)
+    # print(layer_2.shape, layer_3.shape, layer_4.shape)
+    return [out1, out2, out3]
 
 
 class BGSODNet:
     def __init__(self, class_dim=10):
         self.fc_size = 5 + class_dim
 
-    def net(self, img_ipt, box_ipt_list, label_list, for_train=True):
+    def net(self, img_ipt, box_ipt_list, label_list, for_test=False):
 
         layer_out = build_backbone_net(img_ipt)
 
@@ -80,33 +107,29 @@ class BGSODNet:
             num_classes=10,
             min_ratio=3,
             max_ratio=50,
-            aspect_ratios=[[1., 2.], [1., 2.], [1., 2.]],
+            aspect_ratios=[[1.], [1., 2.], [1., 3.]],
             base_size=512,
             offset=0.5,
             flip=True,
             clip=True)
 
-        if for_train:
-
+        nms_out = fluid.layers.detection_output(mbox_locs, mbox_confs, boxs, vars, nms_threshold=0.45)  # 非极大值抑制得到的结果
+        if for_test:
+            return nms_out
+        else:
             loss = fluid.layers.ssd_loss(location=mbox_locs,
                                          confidence=mbox_confs,
                                          gt_box=box_ipt_list,
                                          gt_label=label_list,
                                          prior_box=boxs,
-                                         prior_box_var=vars)
-
-            return loss
-        else:
-
-            scores = fluid.layers.transpose(scores, perm=[0, 2, 1])
-            out_box = fluid.layers.multiclass_nms(bboxes=boxes,
-                                                  scores=scores,
-                                                  background_label=10,
-                                                  score_threshold=0.,
-                                                  nms_top_k=400,
-                                                  nms_threshold=0.3,
-                                                  keep_top_k=-1)
-            return scores, out_box
+                                         prior_box_var=vars,
+                                         background_label=-1)
+            loss = fluid.layers.mean(loss)
+            map_eval = fluid.metrics.DetectionMAP(nms_out, label_list, box_ipt_list, class_num=10,
+                                                  overlap_threshold=0.5,
+                                                  evaluate_difficult=False, ap_version='11point')
+            cur_map, accum_map = map_eval.get_map_var()
+            return loss, cur_map, accum_map, map_eval
 
 # Test
 # a = fluid.layers.data(name="a", shape=[3, 512, 512], dtype="float32")
