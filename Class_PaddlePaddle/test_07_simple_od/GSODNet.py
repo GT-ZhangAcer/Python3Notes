@@ -6,6 +6,7 @@
 import paddle.fluid as fluid
 from paddle.fluid.param_attr import ParamAttr
 from paddle.fluid.initializer import MSRA
+from resnet_simple import SimpleResNet
 
 
 # img_size = (512, 512)
@@ -19,7 +20,6 @@ def conv_bn(
         num_groups=1,
         act='relu',
         use_cudnn=True):
-    parameter_attr = ParamAttr(learning_rate=0.1, initializer=MSRA())
     conv = fluid.layers.conv2d(
         input=input,
         num_filters=num_filters,
@@ -27,9 +27,7 @@ def conv_bn(
         stride=stride,
         padding=padding,
         groups=num_groups,
-        use_cudnn=use_cudnn,
-        param_attr=parameter_attr,
-        bias_attr=False)
+        use_cudnn=use_cudnn)
     return fluid.layers.batch_norm(input=conv, act=act)
 
 
@@ -52,45 +50,24 @@ def depthwise_separable(input, num_filters1, num_filters2, num_groups, stride, s
     return pointwise_conv
 
 
-def box_conv(ipt, filter):
-    """
-    提供输出的卷积函数
-    """
-    # 1x1
-    conv = conv_bn(
-        input=ipt,
-        filter_size=1,
-        num_filters=filter,
-        stride=1,
-        num_groups=1,
-        padding=0)
-
-    # 3x3
-    conv = conv_bn(
-        input=conv,
-        filter_size=3,
-        num_filters=filter,
-        stride=2,
-        num_groups=1,
-        padding=1)
-    return conv
-
-
 def build_backbone_net(ipt):
     """
     基础网络
     :param ipt: 输入数据
     :return: 网络输出
     """
-    layer_1 = conv_bn(ipt, filter_size=3, num_filters=64, stride=2, padding=1)
-    layer_2 = conv_bn(layer_1, filter_size=3, num_filters=128, stride=2, padding=1)
-    layer_3 = conv_bn(layer_2, filter_size=3, num_filters=256, stride=2, padding=1)
-    layer_4 = conv_bn(layer_3, filter_size=3, num_filters=512, stride=2, padding=1)
-    out1 = box_conv(layer_2, 32)
-    out2 = box_conv(layer_3, 64)
-    out3 = box_conv(layer_4, 128)
-    # print(layer_2.shape, layer_3.shape, layer_4.shape)
-    return [out1, out2, out3]
+    # layer_1 = conv_bn(ipt, filter_size=3, num_filters=64, stride=2, padding=1)
+    # layer_2 = conv_bn(layer_1, filter_size=3, num_filters=128, stride=2, padding=1)
+    # layer_3 = conv_bn(layer_2, filter_size=3, num_filters=128, stride=2, padding=1)
+    # layer_4 = conv_bn(layer_3, filter_size=3, num_filters=128, stride=2, padding=1)
+    # layer_5 = conv_bn(layer_4, filter_size=3, num_filters=256, stride=2, padding=1)
+    # layer_6 = conv_bn(layer_5, filter_size=3, num_filters=256, stride=2, padding=1)
+    # layer_7 = conv_bn(layer_6, filter_size=3, num_filters=512, stride=2, padding=1)
+    # layer_8 = conv_bn(layer_7, filter_size=3, num_filters=512, stride=2, padding=1)
+    # # print(layer_2.shape, layer_3.shape, layer_4.shape)
+    # return [layer_4, layer_6, layer_8]
+    net_obj = SimpleResNet(ipt)
+    return net_obj.req_detection_net()
 
 
 class BGSODNet:
@@ -104,11 +81,11 @@ class BGSODNet:
         mbox_locs, mbox_confs, boxs, vars = fluid.layers.multi_box_head(
             inputs=layer_out,
             image=img_ipt,
-            num_classes=10,
+            num_classes=3,
             min_ratio=3,
             max_ratio=50,
             aspect_ratios=[[1.], [1., 2.], [1., 3.]],
-            base_size=512,
+            base_size=300,
             offset=0.5,
             flip=True,
             clip=True)
@@ -123,9 +100,9 @@ class BGSODNet:
                                          gt_label=label_list,
                                          prior_box=boxs,
                                          prior_box_var=vars,
-                                         background_label=-1)
+                                         background_label=0)
             loss = fluid.layers.mean(loss)
-            map_eval = fluid.metrics.DetectionMAP(nms_out, label_list, box_ipt_list, class_num=10,
+            map_eval = fluid.metrics.DetectionMAP(nms_out, label_list, box_ipt_list, class_num=3,
                                                   overlap_threshold=0.5,
                                                   evaluate_difficult=False, ap_version='11point')
             cur_map, accum_map = map_eval.get_map_var()
