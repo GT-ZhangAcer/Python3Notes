@@ -8,7 +8,7 @@ path = Class_OS.o1_获得当前工作目录.main()
 params_dirname = path + "test01.inference.model/"
 print("训练后文件夹路径" + params_dirname)
 # 参数初始化
-gpu = fluid.CUDAPlace(0)
+gpu = fluid.CPUPlace()
 exe = fluid.Executor(gpu)
 
 # 定义数据
@@ -33,7 +33,7 @@ sgd_optimizer.minimize(avg_cost)
 prog = fluid.default_startup_program()
 exe.run(prog)
 
-for i in range(50):
+for i in range(1):
     print("正在训练第" + str(i + 1) + "次")
     for data_id in range(len(y_true)):
         data_x = numpy.array(train_data[data_id]).astype("float32").reshape((1, 1))
@@ -48,13 +48,12 @@ for i in range(50):
         data_x = numpy.array(test_data[data_id]).astype("float32").reshape((1, 1))
         data_y = numpy.array(test_true[data_id]).astype("float32").reshape((1, 1))
         outs = exe.run(program=test_program,
-            feed={'x': data_x, 'y': data_y},
-            fetch_list=[y_predict.name, avg_cost])  # feed为数据表 输入数据和标签数据
+                       feed={'x': data_x, 'y': data_y},
+                       fetch_list=[y_predict.name, avg_cost])  # feed为数据表 输入数据和标签数据
         # 观察结果
         print(outs)
 # 保存预测模型
 fluid.io.save_inference_model(params_dirname, ['x'], [y_predict], exe)
-
 print(params_dirname)
 
 new_scope = fluid.Scope()

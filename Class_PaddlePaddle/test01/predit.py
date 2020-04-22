@@ -17,6 +17,7 @@ exe = fluid.Executor(cpu)
 
 
 # 加载模型
+
 [inference_program, feed_target_names, fetch_targets] = fluid.io.load_inference_model(params_dirname, exe)
 
 results = exe.run(inference_program,

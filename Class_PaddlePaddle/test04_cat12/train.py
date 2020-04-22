@@ -42,7 +42,7 @@ with fluid.program_guard(main_program=defectProgram, startup_program=startup):
     img = fluid.layers.data(name="img", shape=[3, 224, 224], dtype="float32")
     label = fluid.layers.data(name="label", shape=[1], dtype="int64")
 
-    net_x = SE_ResNeXt152_32x4d().net(input=img, class_dim=12)
+    net_x = SE_ResNeXt152_32x4d().net(ipt=img, class_dim=12)
 
     net_x.stop_gradient=True
     net_x = fluid.layers.fc(input=net_x, size=12, act='softmax')
