@@ -30,7 +30,7 @@ def reader():
 params_dirname = "./understand_sentiment_conv.inference.model"
 [inferencer, feed_target_names, fetch_targets] = fluid.io.load_inference_model(params_dirname, exe)
 
-batch_reader = paddle.batch(reader=reader, batch_size=128)
+batch_reader = fluid.io.batch(reader=reader, batch_size=128)
 feeder = fluid.DataFeeder(place=place, feed_list=feed_target_names, program=inferencer)
 
 assert feed_target_names[0] == "words"
