@@ -4,7 +4,7 @@
 # Please indicate the source for reprinting.
 
 init_w = 0.5
-lr = 0.5
+lr = 0.1
 
 
 def forward(x, param):
@@ -26,7 +26,7 @@ def backward(out, param, target):
 
 
 train_param = init_w
-for i in range(10):
+for i in range(1, 10):
     train_target = i * 3
     train_out = forward(i, train_param)
     loss(train_out, train_target)
